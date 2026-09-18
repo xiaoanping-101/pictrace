@@ -1,0 +1,29 @@
+{
+  "name": "pictrace",
+  "version": "1.0.0",
+  "description": "溯图 PicTrace — 开源以图溯源检索平台：一次上传，聚合 Google Lens / Yandex / Bing / TinEye / 百度识图 / 搜狗等引擎，定位图片在公众号文章、帖子、视频中的出处链接。Open-source reverse image provenance search aggregator.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "reverse-image-search",
+    "image-provenance",
+    "osint",
+    "image-forensics",
+    "perceptual-hash",
+    "search-aggregator",
+    "以图搜图",
+    "图片溯源"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xiaoanping-101/pictrace.git"
+  },
+  "author": "xiaoanping-101"
+}

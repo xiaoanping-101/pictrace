@@ -1,0 +1,20 @@
+# 运行产物
+.server.log
+*.log
+
+# 调试临时文件
+.debug-*
+.dbg-*
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+
+# Node
+node_modules/

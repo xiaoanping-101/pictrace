@@ -20,12 +20,12 @@
 - 🤖 **服务端聚合检索**：服务器代为向引擎提交图片并解析结果（SauceNAO / IQDB 实测可用；Yandex / Bing / 百度受反爬限制时自动降级为深链）
 - 🏷️ **结果自动分类**：按 **公众号文章（mp.weixin.qq.com）/ 视频 / 社交帖子 / 新闻媒体** 分组过滤
 - 📚 **引用报告导出**：一键生成含检索时间、哈希、命中链接的 Markdown 溯源报告，条目按 GB/T 7714 顺序编码格式要点生成
-- 🗃️ **本地图库查重**：图片加入 IndexedDB 图库后，用汉明距离自动匹配近似图
+- 🗃️ **本地图库查重**：图片加入 IndexedDB 图库后，用汉明距离自动匹配近似图；v1.1 起可启用 **CLIP ViT-B/32 本地语义模型**（transformers.js，浏览器内推理），按语义相似度匹配图片
 - 🌐 **中英双语界面**，深色取证风，无框架、无构建、零 npm 依赖
 
-| 首页 | 工作台 + 聚合结果 |
-| --- | --- |
-| ![home](docs/screenshots/home.png) | ![workbench](docs/screenshots/workbench-results.png) |
+| 首页 | 工作台 + 聚合结果 | 语义模型与图库匹配（v1.1） |
+| --- | --- | --- |
+| ![home](docs/screenshots/home.png) | ![workbench](docs/screenshots/workbench-results.png) | ![semantic](docs/screenshots/semantic-model.png) |
 
 > 截图为真实运行画面：右侧聚合结果中的 "Dog Loves You More Than He Loves Himself (55.51%)" 即 SauceNAO 对测试图片返回的真实出处。
 
@@ -100,6 +100,62 @@ flowchart LR
     H -- 否 --> J[判定为不同图]
 ```
 
+## 运用的模型（Models Used）
+
+PicTrace 的模型分为三层：**内置算法模型（本地）**、**可选深度学习模型（本地）**、**依托的外部引擎 AI 模型（调用不内置）**。
+
+### 1. 内置算法模型（零依赖核心，纯本地）
+
+| 模块 | 算法/模型 | 出处与致谢 |
+| --- | --- | --- |
+| 感知哈希 | aHash（均值哈希）、dHash（梯度哈希）、pHash（DCT-II 低频系数中位数二值化，64bit） | [imagehash](https://github.com/JohannesBuchner/imagehash)（BSD-2）、[pHash.org](https://www.phash.org/)、Krawetz (2013) |
+| 近似图判定 | 汉明距离 ≤ 10（pHash/dHash 双指标取最小） | 同上 |
+| 元数据解析 | JPEG APP1(TIFF IFD0/Exif/GPS)、PNG tEXt/iTXt | EXIF 2.3（CIPA DC-008）、PNG ISO/IEC 15948 |
+| 结果分类 | 域名启发式分类器（公众号/视频/社交/新闻） | 本项目原创 |
+
+**设计决策**：核心功能不引入神经网络——感知哈希 + EXIF 在浏览器内毫秒级完成、无模型下载、隐私绝对可控，且对"找同一张图的转载"这一主场景已足够。
+
+### 2. 可选深度学习模型：CLIP ViT-B/32（v1.1 新增，默认关闭）
+
+为弥补感知哈希只能匹配"近似同图"、无法匹配"语义相关图"的盲区，v1.1 起提供可选的本地语义模型：
+
+| 项 | 说明 |
+| --- | --- |
+| 模型 | **CLIP ViT-B/32**（`Xenova/clip-vit-base-patch32`，q8 量化，约 60–90MB） |
+| 原作者 | OpenAI（*Learning Transferable Visual Models From Natural Language Supervision*, ICML 2021）；transformers.js 移植版来自 [Xenova](https://github.com/xenova/transformers.js) |
+| 运行时 | [transformers.js](https://github.com/huggingface/transformers.js) v3，浏览器内 WebGPU/WASM 推理，**图片不离开本机** |
+| 用途 | 为本地图库图片生成 512 维归一化视觉嵌入；以余弦相似度（≥ 0.75 阈值）做语义匹配，与感知哈希结果并列展示 |
+| 加载策略 | 点击"启用语义模型"后才动态 import CDN 运行时（jsdelivr → npmmirror → unpkg 回退）；模型权重优先经本地服务器 `/api/hf/*` 中转 hf-mirror.com（大陆网络友好，服务端出口可靠），纯静态托管时回退浏览器直连镜像站；权重由浏览器 Cache API 缓存，仅首次下载较慢；任何失败不影响核心功能 |
+
+```mermaid
+flowchart TD
+    A[点击 启用语义模型] --> B[动态加载 transformers.js v3<br/>jsdelivr → npmmirror → unpkg]
+    B --> C{权重下载走哪条路?}
+    C -- "本地服务器可用" --> D[经 /api/hf/* 中转 hf-mirror.com<br/>（服务端出口，大陆友好）]
+    C -- "纯静态托管" --> E[浏览器直连 hf-mirror.com]
+    D --> F[下载 CLIP ViT-B/32 q8 权重<br/>（浏览器 Cache API 缓存，仅首次慢）]
+    E --> F
+    F --> G[浏览器内 WebGPU/WASM 推理<br/>canvas 转 Blob 输入]
+    G --> H[512 维嵌入向量]
+    H --> I[(存入 IndexedDB 图库记录)]
+    H --> J[余弦相似度匹配<br/>阈值 ≥ 0.75]
+    I --> J
+    J --> K[与感知哈希命中并列展示<br/>语义相似度 xx.x% · hamming ≈ n]
+```
+
+### 3. 依托的外部 AI 模型（引擎侧，本项目仅调用其公开服务）
+
+| 引擎 | 其模型能力（由引擎方运营，商标归各自所有者） |
+| --- | --- |
+| Google Lens | 大规模视觉识别/知识图谱匹配 |
+| Yandex Images | CBIR 以图搜图索引（人脸/场景较强） |
+| Bing Visual Search | 视觉相似检索 |
+| 百度识图 | 图谱化视觉搜索（中文网页/公众号覆盖好） |
+| SauceNAO | 深度索引聚合（动漫图库、DeviantArt 等） |
+| IQDB / Ascii2D / trace.moe | 图库聚合检索 / 动画帧匹配 |
+
+> 边界说明：以上引擎的 AI 能力运行在它们的服务器上；PicTrace 通过深链或服务端聚合调用其公开入口，**不分发、不修改其模型**。
+
 ## 为什么做这个项目（与同类开源的差异）
 
 发布前我们调研了 GitHub 上 186 个 `reverse-image-search` 主题项目（详见[调研报告](docs/research.md)）：
@@ -152,6 +208,7 @@ flowchart LR
 | `/api/img` | POST | 原始图片字节体 → `{id}`（内存保存 30 分钟） |
 | `/api/search` | POST | `{id 或 url, engines?}` → 各引擎状态与命中列表 |
 | `/api/proxy?url=` | GET | 图片代理（供前端跨域取证） |
+| `/api/hf/*` | GET | 模型权重中转（hf-mirror.com，供 CLIP 模块，大陆网络友好） |
 | `/img/:id` | GET | 取回已上传图片 |
 
 ## 隐私与合规
@@ -172,7 +229,8 @@ pictrace/
 │   ├── style.css
 │   └── lib/
 │       ├── imghash.js     # aHash / dHash / pHash(DCT)
-│       └── exif.js        # JPEG EXIF / PNG tEXt 精简解析器
+│       ├── exif.js        # JPEG EXIF / PNG tEXt 精简解析器
+│       └── clip.js        # 可选 CLIP ViT-B/32 本地语义模型（transformers.js 按需加载）
 ├── docs/
 │   ├── research.md        # 同类项目调研报告
 │   ├── citation-guide.md  # 引用规范详解
@@ -193,6 +251,10 @@ pictrace/
 - 各识图引擎的公开服务（商标归各自所有，本项目与它们无隶属关系）。
 
 服务端聚合提供器、域名分类器、取证前端与引用报告为本项目原创实现。
+
+## 版本历史
+
+见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## License
 

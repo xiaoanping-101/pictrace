@@ -82,6 +82,19 @@
             <div class="card-title" data-i18n="libMatches">本地图库命中</div>
             <div id="lib-matches"></div>
           </div>
+
+          <div class="card">
+            <div class="card-title">
+              <span>AI <span data-i18n="clipTitle">语义模型（可选）</span></span>
+              <span class="badge">CLIP ViT-B/32</span>
+            </div>
+            <p class="hint" data-i18n="clipHint">启用后下载量化版 CLIP（约 60–90MB），在浏览器本地推理：本地图库可按"语义相似"匹配图片，弥补感知哈希只能找"近似同图"的盲区。默认关闭，不影响核心功能。</p>
+            <div class="btn-row">
+              <button id="btn-clip-enable" class="ghost-btn" data-i18n="clipEnable">启用语义模型</button>
+              <button id="btn-clip-embed" class="ghost-btn" data-i18n="clipEmbed" hidden>为当前图片生成语义向量</button>
+            </div>
+            <div id="clip-status" class="clip-status"></div>
+          </div>
         </div>
 
         <!-- 右列：引擎 + 动作 -->
@@ -147,6 +160,7 @@
 
   <script src="lib/imghash.js"></script>
   <script src="lib/exif.js"></script>
+  <script src="lib/clip.js"></script>
   <script src="engines.js"></script>
   <script src="app.js"></script>
 </body>

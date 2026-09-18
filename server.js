@@ -345,6 +345,42 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, { ok: true, fetch: FETCH_ENABLED, version: '1.0.0' });
   }
 
+  // ---- API：HF 模型权重中转（供 CLIP 语义模块；服务端出口对 hf-mirror 可达性最好）----
+  if (pathname.startsWith('/api/hf/') && req.method === 'GET') {
+    const rest = pathname.slice('/api/hf/'.length).replace(/^\/+/, '');
+    if (!/^[\w.\-\/%]+$/i.test(rest) || rest.includes('..')) {
+      return sendJson(res, 400, { error: 'invalid path' });
+    }
+    const target = `https://hf-mirror.com/${rest}${u.search || ''}`;
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 10 * 60 * 1000); // 大文件允许长传输
+      const range = req.headers.range;
+      const resp = await fetch(target, {
+        headers: {
+          'User-Agent': UA,
+          ...(range ? { Range: range } : {}),
+        },
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges, ETag, Location',
+        'Cache-Control': 'public, max-age=86400',
+      };
+      for (const h of ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag', 'location']) {
+        const v = resp.headers.get(h);
+        if (v) headers[h] = v;
+      }
+      res.writeHead(resp.status, headers);
+      const buf = Buffer.from(await resp.arrayBuffer());
+      return res.end(buf);
+    } catch (e) {
+      return sendJson(res, 502, { error: String(e.message || e).slice(0, 120) });
+    }
+  }
+
   // ---- API：图片代理（让前端能对跨域图片做本地取证/载入）----
   if (pathname === '/api/proxy' && req.method === 'GET') {
     const target = u.searchParams.get('url');

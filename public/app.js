@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '1.0.0';
+  const VERSION = '1.1.0';
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
@@ -54,7 +54,17 @@
       hintNoResults: '没有抓取到可展示的结果。各引擎反爬策略可能导致服务端抓取失败——请直接点上方引擎卡片人工核验，这同样可靠。',
       kwPlaceholder: '例如：城市名、事件、人物、作品名…',
       footerDisclaimer: '免责声明：PicTrace 仅提供公开搜索引擎的聚合入口与本地取证工具，请遵守各引擎服务条款与当地法律法规，尊重图片版权与个人隐私（尤其是人脸检索场景）。',
-      footerCredits: '引擎清单思路致谢 dessant/search-by-image · 感知哈希算法致谢 imagehash / pHash · 服务端聚合为本项目原创实现 · MIT License',
+      footerCredits: '引擎清单思路致谢 dessant/search-by-image · 感知哈希算法致谢 imagehash / pHash · 语义模型 CLIP (OpenAI) 经 transformers.js 本地运行 · MIT License',
+      clipTitle: '语义模型（可选）',
+      clipHint: '启用后下载量化版 CLIP（约 60–90MB），在浏览器本地推理：本地图库可按"语义相似"匹配图片，弥补感知哈希只能找"近似同图"的盲区。默认关闭，不影响核心功能。',
+      clipEnable: '启用语义模型',
+      clipEmbed: '为当前图片生成语义向量',
+      clipReady: '✅ 模型就绪，本地推理已开启',
+      clipLoading: '模型下载中，请稍候…',
+      clipFailed: (m) => `启用失败：${m}（核心功能不受影响）`,
+      clipEmbedDone: '已生成并用于图库语义匹配',
+      clipEmbedBusy: '推理中…',
+      semSim: '语义相似度',
     },
     en: {
       tagline: 'Trace any image to its sources across engines',
@@ -94,7 +104,17 @@
       hintNoResults: 'No scrapeable results. Engines may have blocked server-side fetching — verify manually via the engine cards above; that path always works.',
       kwPlaceholder: 'e.g. city name, event, person, artwork…',
       footerDisclaimer: 'Disclaimer: PicTrace is an aggregation front-end for public search engines plus local forensic tools. Follow each engine\u2019s terms of service and local law; respect copyright and privacy (especially for face search).',
-      footerCredits: 'Engine registry inspired by dessant/search-by-image · perceptual hashes after imagehash / pHash · server-side aggregation is original work · MIT License',
+      footerCredits: 'Engine registry inspired by dessant/search-by-image · perceptual hashes after imagehash / pHash · semantic model: CLIP (OpenAI) via transformers.js, on-device · MIT License',
+      clipTitle: 'semantic model (optional)',
+      clipHint: 'Downloads a quantized CLIP (~60–90 MB) on first enable and runs fully on-device: the local library can match images by semantic similarity, covering the blind spot of perceptual hashing. Off by default; core features are unaffected.',
+      clipEnable: 'Enable semantic model',
+      clipEmbed: 'Embed current image',
+      clipReady: '✅ Model ready — on-device inference active',
+      clipLoading: 'Downloading model…',
+      clipFailed: (m) => `Failed to enable: ${m} (core features unaffected)`,
+      clipEmbedDone: 'Embedding stored and used for library matching',
+      clipEmbedBusy: 'Inferring…',
+      semSim: 'Semantic similarity',
     },
   };
   let lang = localStorage.getItem('pt-lang') || 'zh';
@@ -218,6 +238,7 @@
     if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
     state.uploadedId = null;
     state.agg = null;
+    state.clipVec = null;
     $('#sec-results').hidden = true;
     $('#lib-match-card').hidden = true;
   }
@@ -562,6 +583,10 @@
       name: state.fileName, url: state.remoteUrl || null,
       hashes: state.analysis.hashes, thumb: thumbDataUrl(state.imgEl), ts: Date.now(),
     };
+    // 语义模型就绪时顺带保存 CLIP 嵌入（旧记录没有向量属正常，重新加入即可）
+    if (clipReady() && state.imgEl) {
+      try { rec.clip = window.PicTraceCLIP.serialize(await window.PicTraceCLIP.embed(state.imgEl)); } catch { /* 忽略 */ }
+    }
     db.transaction('images', 'readwrite').objectStore('images').add(rec);
     toast(t('libAdded'));
     checkLibraryMatch();
@@ -579,26 +604,78 @@
       });
     } catch { return; }
     const cur = state.analysis.hashes;
+    const curVec = state.clipVec || null;
+    const CLIP = window.PicTraceCLIP;
     const hits = recs
-      .map((r) => ({
-        ...r,
-        dist: Math.min(
+      .map((r) => {
+        const dist = Math.min(
           window.PicTraceHash.hamming(cur.pHash, r.hashes.pHash),
           window.PicTraceHash.hamming(cur.dHash, r.hashes.dHash),
-        ),
-      }))
-      .filter((r) => r.dist <= 10)
-      .sort((a, b) => a.dist - b.dist)
-      .slice(0, 6);
+        );
+        const sem = curVec && r.clip ? CLIP.cosine(curVec, CLIP.deserialize(r.clip)) : null;
+        return { ...r, dist, sem };
+      })
+      .filter((r) => r.dist <= 10 || (r.sem !== null && r.sem >= 0.75))
+      .sort((a, b) => (b.sem ?? -1) - (a.sem ?? -1) || a.dist - b.dist)
+      .slice(0, 8);
     const card = $('#lib-match-card');
     if (!hits.length) { card.hidden = true; return; }
     card.hidden = false;
-    $('#lib-matches').innerHTML = hits.map((r) => `
+    $('#lib-matches').innerHTML = hits.map((r) => {
+      const metrics = [];
+      if (r.sem !== null) metrics.push(`${t('semSim')} ${(r.sem * 100).toFixed(1)}%`);
+      if (r.dist <= 10) metrics.push(`hamming ≈ ${r.dist}`);
+      return `
       <div class="lib-hit">
         <img src="${r.thumb}" alt="">
-        <div>${r.name}<br><span class="dist">hamming ≈ ${r.dist}${r.url ? ` · <a href="${r.url}" target="_blank" rel="noopener">来源</a>` : ''}</span></div>
-      </div>`).join('');
+        <div>${r.name}<br><span class="dist">${metrics.join(' · ') || '—'}${r.url ? ` · <a href="${r.url}" target="_blank" rel="noopener">来源</a>` : ''}</span></div>
+      </div>`;
+    }).join('');
   }
+
+  // ------------------------------------------------------------
+  // AI 语义模型（CLIP ViT-B/32，可选、本地推理）
+  // ------------------------------------------------------------
+  const clip = window.PicTraceCLIP;
+  const clipReady = () => clip && clip.state.status === 'ready';
+
+  function renderClipStatus() {
+    const el = $('#clip-status');
+    const s = clip.state;
+    if (s.status === 'loading') el.textContent = `${t('clipLoading')} ${s.progress || ''}`.trim();
+    else if (s.status === 'ready') el.textContent = t('clipReady') + (s.backend ? ` · ${s.backend}` : '');
+    else if (s.status === 'error') el.textContent = t('clipFailed')(s.error);
+    else el.textContent = '';
+    $('#btn-clip-embed').hidden = !clipReady();
+    $('#btn-clip-enable').disabled = s.status === 'loading';
+    $('#btn-clip-enable').textContent = s.status === 'loading' ? t('clipLoading') : t('clipEnable');
+  }
+
+  $('#btn-clip-enable').addEventListener('click', async () => {
+    renderClipStatus();
+    try {
+      await clip.enable(renderClipStatus);
+      renderClipStatus();
+    } catch { renderClipStatus(); }
+  });
+
+  $('#btn-clip-embed').addEventListener('click', async () => {
+    if (!state.imgEl || !clipReady()) { toast(t('noImage')); return; }
+    const btn = $('#btn-clip-embed');
+    btn.disabled = true;
+    const old = btn.textContent;
+    btn.textContent = t('clipEmbedBusy');
+    try {
+      state.clipVec = await clip.embed(state.imgEl);
+      toast(t('clipEmbedDone'));
+      checkLibraryMatch();
+    } catch (e) {
+      toast(String(e.message || e).slice(0, 80));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = old;
+    }
+  });
 
   // ------------------------------------------------------------
   // 历史（localStorage）
@@ -731,6 +808,7 @@
     applyLang();
     renderKeywordGrid();
     renderHistory();
+    renderClipStatus();
     try {
       const r = await fetch('/api/health');
       state.health = await r.json();

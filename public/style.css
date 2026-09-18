@@ -222,6 +222,10 @@ button { font: inherit; cursor: pointer; }
 .lib-hit img { width: 48px; height: 48px; border-radius: 6px; object-fit: cover; }
 .lib-hit .dist { color: var(--ok); font-family: var(--mono); }
 
+/* ---- CLIP 模型状态 ---- */
+.clip-status { font-size: .78rem; color: var(--text-dim); min-height: 1.2em; word-break: break-all; }
+.clip-status:empty { display: none; }
+
 /* ---- 页脚 ---- */
 footer {
   border-top: 1px solid var(--line); margin-top: 30px; padding: 18px clamp(16px, 4vw, 40px);

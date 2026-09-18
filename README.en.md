@@ -42,6 +42,16 @@ Optional environment variables:
 | `PICTRACE_FETCH=0` | Disable server-side fetching (static + deep-link mode) |
 | `NODE_USE_ENV_PROXY=1` + `HTTPS_PROXY=…` | Node ≥ 24 built-in: route server outbound requests through a proxy |
 
+## Models used
+
+PicTrace's models sit in three layers:
+
+1. **Built-in algorithmic models (zero-dependency core, on-device)** — aHash / dHash / pHash (DCT-II) perceptual hashing with hamming-distance matching (after [imagehash](https://github.com/JohannesBuchner/imagehash) / [pHash](https://www.phash.org/)), EXIF/TIFF/PNG metadata parsing, and an original heuristic domain classifier. The core deliberately ships **no neural network**: millisecond on-device analysis, no model download, absolute privacy.
+2. **Optional deep-learning model (v1.1, off by default)** — **CLIP ViT-B/32** (`Xenova/clip-vit-base-patch32`, q8) via [transformers.js](https://github.com/huggingface/transformers.js) v3, running fully in-browser (WebGPU/WASM). Adds semantic-similarity matching (cosine ≥ 0.75) for the local IndexedDB library, covering the blind spot of hash-only matching. The runtime is lazy-imported from CDN (jsdelivr → npmmirror → unpkg); model weights are routed through the local server's `/api/hf/*` passthrough to hf-mirror.com (China-friendly) when available, falling back to direct browser access on static hosting. Nothing loads until the user clicks *Enable semantic model*.
+3. **External engine-side AI models (invoked, not bundled)** — Google Lens, Yandex CBIR, Bing Visual Search, Baidu Graph, SauceNAO etc. run their own models on their servers; PicTrace only calls their public endpoints via deep links or server-side aggregation and never redistributes their models.
+
+See [README.md](README.md) for the CLIP inference flowchart and the full model table.
+
 ## How it works
 
 ```mermaid

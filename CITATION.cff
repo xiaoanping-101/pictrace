@@ -3,19 +3,21 @@ message: "If you use PicTrace in your work, please cite it as below."
 title: "PicTrace: Open-source Reverse Image Provenance Search Aggregator"
 type: software
 authors:
-  - alias: "xiaoanping-101"
+  - name: xiaoanping-101
     website: "https://github.com/xiaoanping-101"
 identifiers:
   - type: url
     value: "https://github.com/xiaoanping-101/pictrace"
+    description: "Repository URL"
 repository-code: "https://github.com/xiaoanping-101/pictrace"
 abstract: >-
   PicTrace (溯图) is an open-source, zero-dependency web app for image
-  provenance: load an image once and search it across 14 reverse-image
+  provenance: load an image once and search it across major reverse-image
   engines (Google Lens, Yandex, Bing, TinEye, Baidu, Sogou, SauceNAO,
   IQDB, ...), with in-browser EXIF forensics, perceptual hashes
-  (aHash/dHash/pHash), server-side aggregation, WeChat-article / video /
-  social result classification, and citation-ready Markdown reporting.
+  (aHash/dHash/pHash), an optional on-device CLIP ViT-B/32 semantic
+  model, server-side aggregation, WeChat-article / video / social result
+  classification, and citation-ready Markdown reporting.
 keywords:
   - reverse-image-search
   - image-provenance

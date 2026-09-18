@@ -17,6 +17,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { Readable } = require('stream');
 
 const PORT = Number(process.env.PORT || 4173);
 const FETCH_ENABLED = process.env.PICTRACE_FETCH !== '0';
@@ -375,9 +376,17 @@ const server = http.createServer(async (req, res) => {
         if (v) headers[h] = v;
       }
       res.writeHead(resp.status, headers);
-      const buf = Buffer.from(await resp.arrayBuffer());
-      return res.end(buf);
+      // 流式转发：大文件（模型权重几十 MB）不能整体进内存，且传输中断时
+      // 不得再写 headers（ERR_HTTP_HEADERS_SENT 会击穿整个进程）
+      if (resp.body) {
+        const nodeStream = Readable.fromWeb(resp.body);
+        nodeStream.on('error', () => res.destroy());
+        nodeStream.pipe(res);
+        return;
+      }
+      return res.end(Buffer.from(await resp.arrayBuffer()));
     } catch (e) {
+      if (res.headersSent) return res.destroy();
       return sendJson(res, 502, { error: String(e.message || e).slice(0, 120) });
     }
   }

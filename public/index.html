@@ -95,6 +95,30 @@
             </div>
             <div id="clip-status" class="clip-status"></div>
           </div>
+
+          <div class="card">
+            <div class="card-title">
+              <span data-i18n="recTitle">内容识别与相似检索</span>
+              <span class="badge">CLIP zero-shot</span>
+            </div>
+            <p class="hint" data-i18n="recHint">本地识别图片内容类型（人物/动物/地标/动漫/商品…），自动生成检索词，路由到最擅长"相似人物/物体/场景"的引擎，并直达文章/视频平台的同类内容检索。需先启用语义模型。</p>
+            <div class="btn-row">
+              <button id="btn-recognize" class="primary-btn" data-i18n="recGo">识别图片内容并生成检索方案</button>
+            </div>
+            <div id="recognize-result" hidden>
+              <div class="card-sub" data-i18n="recLabels">内容类型（本地零样本置信度）</div>
+              <div id="rec-labels" class="label-bars"></div>
+              <div class="card-sub" data-i18n="recKeywords">建议检索词（点击填入下方关键词框）</div>
+              <div id="rec-chips" class="chip-row"></div>
+              <div id="rec-route-wrap" hidden>
+                <div class="card-sub" id="rec-route-title"></div>
+                <div id="rec-route-engines" class="route-engines"></div>
+                <p id="rec-privacy-note" class="hint warn-hint" hidden></p>
+              </div>
+              <div class="card-sub" data-i18n="recPlatforms">用建议检索词直达文章/视频平台</div>
+              <div id="rec-platforms" class="platform-grid"></div>
+            </div>
+          </div>
         </div>
 
         <!-- 右列：引擎 + 动作 -->
@@ -161,6 +185,7 @@
   <script src="lib/imghash.js"></script>
   <script src="lib/exif.js"></script>
   <script src="lib/clip.js"></script>
+  <script src="lib/recognize.js"></script>
   <script src="engines.js"></script>
   <script src="app.js"></script>
 </body>

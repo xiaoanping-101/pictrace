@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '1.1.1';
+  const VERSION = '1.2.0';
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
@@ -65,6 +65,17 @@
       clipEmbedDone: '已生成并用于图库语义匹配',
       clipEmbedBusy: '推理中…',
       semSim: '语义相似度',
+      recTitle: '内容识别与相似检索',
+      recHint: '本地识别图片内容类型（人物/动物/地标/动漫/商品…），自动生成检索词，路由到最擅长"相似人物/物体/场景"的引擎，并直达文章/视频平台的同类内容检索。需先启用语义模型。',
+      recGo: '识别图片内容并生成检索方案',
+      recBusy: '识别中…',
+      recLabels: '内容类型（本地零样本置信度）',
+      recKeywords: '建议检索词（点击填入关键词框）',
+      recNoKw: '（该类型暂无自动建议，可手动输入）',
+      recPlatforms: '用建议检索词直达文章/视频平台',
+      recPersonNote: '⚠️ 人物检索涉及肖像权与隐私法规：请仅用于事实核查、找回本人照片等合法目的，详见 PRIVACY.md。',
+      kwFilled: '已填入关键词框，可点击引擎检索',
+      platformCat: { video: '视频', article: '文章', qa: '问答' },
     },
     en: {
       tagline: 'Trace any image to its sources across engines',
@@ -115,6 +126,17 @@
       clipEmbedDone: 'Embedding stored and used for library matching',
       clipEmbedBusy: 'Inferring…',
       semSim: 'Semantic similarity',
+      recTitle: 'Content recognition & similar search',
+      recHint: 'Recognizes the image content type (person/animal/landmark/anime/product…) on-device, generates query terms, routes to the best engines for similar people/objects/scenes, and deep-links to article/video platform searches. Requires the semantic model.',
+      recGo: 'Recognize content & build search plan',
+      recBusy: 'Recognizing…',
+      recLabels: 'Content types (on-device zero-shot confidence)',
+      recKeywords: 'Suggested queries (click to fill the keyword box)',
+      recNoKw: '(no auto suggestion for this type — type manually)',
+      recPlatforms: 'Open article/video platform searches with the suggested query',
+      recPersonNote: '⚠️ Person search implicates portrait & privacy law: use only for lawful purposes such as fact-checking or finding your own photos. See PRIVACY.md.',
+      kwFilled: 'Filled into the keyword box — click an engine to search',
+      platformCat: { video: 'video', article: 'article', qa: 'Q&A' },
     },
   };
   let lang = localStorage.getItem('pt-lang') || 'zh';
@@ -196,6 +218,7 @@
     renderKeywordGrid();
     if (state.analysis) renderAnalysis();
     if (state.agg) renderResults();
+    if (state.lastRec) renderRecognize(state.lastRec);
   }
 
   // ------------------------------------------------------------
@@ -239,8 +262,10 @@
     state.uploadedId = null;
     state.agg = null;
     state.clipVec = null;
+    state.lastRec = null;
     $('#sec-results').hidden = true;
     $('#lib-match-card').hidden = true;
+    $('#recognize-result').hidden = true;
   }
 
   // ------------------------------------------------------------
@@ -674,6 +699,100 @@
     } finally {
       btn.disabled = false;
       btn.textContent = old;
+    }
+  });
+
+  // ------------------------------------------------------------
+  // 内容识别与相似检索（CLIP 零样本分类 + 实体路由）
+  // ------------------------------------------------------------
+  function updatePlatformLinks(kw) {
+    const P = window.PicTraceRecognize.PLATFORMS;
+    $('#rec-platforms').innerHTML = P.map((p) => {
+      const href = kw ? p.url(kw) : null;
+      const inner = `${p.name}<span class="cat">${t('platformCat')[p.category] || p.category}</span>`;
+      return href
+        ? `<a class="cat-${p.category}" href="${href}" target="_blank" rel="noopener">${inner}</a>`
+        : `<a class="cat-${p.category}" aria-disabled="true" title="${t('kwFilled')}">${inner}</a>`;
+    }).join('');
+  }
+
+  function renderRecognize(res) {
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    $('#recognize-result').hidden = false;
+
+    // 置信度条
+    $('#rec-labels').innerHTML = res.top.map((l) => {
+      const name = lang === 'zh' ? l.zh : l.en.replace(/^(a|an)\s+/, '');
+      return `
+      <div class="label-bar">
+        <span class="lb-name" title="${esc(l.en)}">${esc(name)}</span>
+        <span class="lb-track"><span class="lb-fill" style="width:${Math.max(2, Math.round(l.score * 100))}%"></span></span>
+        <span class="lb-score">${(l.score * 100).toFixed(1)}%</span>
+      </div>`;
+    }).join('');
+
+    // 建议检索词 chips
+    const chips = [];
+    const seen = new Set();
+    for (const l of res.top) {
+      for (const q of [l.qzh, l.qen]) {
+        if (q && !seen.has(q)) { seen.add(q); chips.push(q); }
+      }
+    }
+    $('#rec-chips').innerHTML = chips.length
+      ? chips.map((c) => `<button class="chip" data-q="${esc(c)}">${esc(c)}</button>`).join('')
+      : `<span class="hint">${t('recNoKw')}</span>`;
+
+    // 实体路由引擎
+    if (res.route) {
+      $('#rec-route-wrap').hidden = false;
+      $('#rec-route-title').textContent = res.route.zh;
+      $('#rec-route-engines').innerHTML = res.route.engines.map((id) => {
+        const e = ENGINES.find((x) => x.id === id);
+        if (!e) return '';
+        const href = state.remoteUrl && e.byUrl ? e.byUrl(state.remoteUrl) : e.byUpload || '';
+        if (!href) return '';
+        return `<a class="chip" href="${esc(href)}" target="_blank" rel="noopener">🔍 ${esc(e.nameZh || e.name)} ↗</a>`;
+      }).join('');
+      $('#rec-privacy-note').hidden = !res.route.privacyNote;
+      if (res.route.privacyNote) $('#rec-privacy-note').textContent = t('recPersonNote');
+    } else {
+      $('#rec-route-wrap').hidden = true;
+    }
+
+    // 平台直达（默认用第一个建议词）
+    updatePlatformLinks(chips[0] || $('#keyword-input').value.trim());
+    state.recQueries = chips;
+  }
+
+  $('#rec-chips').addEventListener('click', (ev) => {
+    const c = ev.target.closest('.chip[data-q]');
+    if (!c) return;
+    $('#keyword-input').value = c.dataset.q;
+    updatePlatformLinks(c.dataset.q);
+    toast(t('kwFilled'));
+  });
+
+  $('#btn-recognize').addEventListener('click', async () => {
+    if (!state.imgEl) { toast(t('noImage')); return; }
+    const btn = $('#btn-recognize');
+    btn.disabled = true;
+    const old = btn.textContent;
+    try {
+      if (!clipReady()) {
+        btn.textContent = t('clipLoading');
+        await clip.enable(renderClipStatus);
+        renderClipStatus();
+      }
+      btn.textContent = t('recBusy');
+      const res = await window.PicTraceRecognize.recognize(state.imgEl);
+      state.lastRec = res;
+      renderRecognize(res);
+    } catch (e) {
+      toast(String(e.message || e).slice(0, 90));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = t('recGo');
     }
   });
 

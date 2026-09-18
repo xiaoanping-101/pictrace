@@ -225,6 +225,34 @@ button { font: inherit; cursor: pointer; }
 /* ---- CLIP 模型状态 ---- */
 .clip-status { font-size: .78rem; color: var(--text-dim); min-height: 1.2em; word-break: break-all; }
 .clip-status:empty { display: none; }
+.warn-hint { color: var(--warn); }
+
+/* ---- 内容识别 ---- */
+.card-sub { font-size: .78rem; color: var(--text-dim); margin: 10px 0 6px; font-weight: 600; }
+.label-bars { display: flex; flex-direction: column; gap: 6px; }
+.label-bar { display: grid; grid-template-columns: 110px 1fr 52px; align-items: center; gap: 10px; font-size: .8rem; }
+.label-bar .lb-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.label-bar .lb-track { height: 8px; border-radius: 6px; background: var(--bg-soft); overflow: hidden; }
+.label-bar .lb-fill { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, #2f9cf5, #4cc2ff); }
+.label-bar .lb-score { font-family: var(--mono); color: var(--text-dim); text-align: right; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  background: var(--card-2); border: 1px solid var(--line); color: var(--text);
+  border-radius: 20px; padding: 3px 12px; font-size: .78rem; cursor: pointer;
+}
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+.route-engines { display: flex; flex-wrap: wrap; gap: 6px; }
+.route-engines .chip { display: inline-flex; align-items: center; gap: 4px; text-decoration: none; }
+.platform-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.platform-grid a {
+  display: flex; align-items: center; justify-content: space-between; gap: 4px;
+  background: var(--card-2); border: 1px solid var(--line); border-radius: 8px;
+  padding: 6px 10px; font-size: .78rem; color: var(--text); text-decoration: none;
+}
+.platform-grid a:hover { border-color: var(--accent); color: var(--accent); }
+.platform-grid a .cat { font-size: .62rem; color: var(--text-dim); }
+.platform-grid a.cat-video .cat { color: #ff7b72; }
+.platform-grid a.cat-article .cat { color: #7ee787; }
 
 /* ---- 页脚 ---- */
 footer {

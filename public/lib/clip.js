@@ -27,6 +27,8 @@
     status: 'idle', // idle | loading | ready | error
     progress: '',
     extractor: null,
+    tf: null,        // transformers.js 模块引用（供零样本分类等扩展管线复用）
+    zeroShot: null,  // 零样本图像分类管线（懒加载缓存）
     error: '',
     backend: '',
     viaServer: false,
@@ -62,6 +64,7 @@
 
       const tf = await loadRuntime();
       const { pipeline, env } = tf;
+      state.tf = tf;
 
       const progress_callback = (p) => {
         if (p && p.status === 'progress' && p.file) {
@@ -110,19 +113,63 @@
    */
   async function embed(imgEl) {
     if (state.status !== 'ready' || !state.extractor) return null;
-    const blob = await new Promise((resolve) => {
-      const MAX = 1024;
+    const blob = await toBlob(imgEl);
+    const out = await state.extractor(blob, { pooling: 'mean', normalize: true });
+    return out.data || (out[0] && out[0].data) || null;
+  }
+
+  /** 图片 → Blob（canvas 缩放中转；transformers.js 需要 Blob/URL 输入） */
+  function toBlob(imgEl, max = 1024) {
+    return new Promise((resolve) => {
       const w0 = imgEl.naturalWidth || imgEl.width;
       const h0 = imgEl.naturalHeight || imgEl.height;
-      const scale = Math.min(MAX / Math.max(w0, h0), 1);
+      const scale = Math.min(max / Math.max(w0, h0), 1);
       const c = document.createElement('canvas');
       c.width = Math.max(1, Math.round(w0 * scale));
       c.height = Math.max(1, Math.round(h0 * scale));
       c.getContext('2d').drawImage(imgEl, 0, 0, c.width, c.height);
       c.toBlob(resolve, 'image/png');
     });
-    const out = await state.extractor(blob, { pooling: 'mean', normalize: true });
-    return out.data || (out[0] && out[0].data) || null;
+  }
+
+  /**
+   * 获取零样本图像分类管线（懒加载；与嵌入管线共用同一套已缓存权重）
+   * @param {(s: object) => void} [onStatus] 下载进度回调
+   */
+  async function ensureZeroShot(onStatus) {
+    if (state.zeroShot) return state.zeroShot;
+    if (state.status !== 'ready' || !state.tf) {
+      await enable(onStatus);
+    }
+    const { pipeline, env } = state.tf;
+    if (state.zeroShot) return state.zeroShot;
+    const progress_callback = (p) => {
+      if (onStatus && p && p.status === 'progress' && p.file) {
+        onStatus({ status: 'loading', progress: `${p.file} ${Math.round(p.progress || 0)}%` });
+      }
+    };
+    const make = async () => pipeline('zero-shot-image-classification', MODEL_ID, {
+      dtype: 'q8',
+      progress_callback,
+    });
+    try {
+      env.remoteHost = global.location ? global.location.origin : '';
+      env.remotePathTemplate = 'api/hf/{model}/resolve/{revision}/';
+      state.zeroShot = await make();
+    } catch (e) {
+      env.remoteHost = 'https://hf-mirror.com';
+      env.remotePathTemplate = '{model}/resolve/{revision}/';
+      state.zeroShot = await make();
+    }
+    return state.zeroShot;
+  }
+
+  /** 零样本分类：对给定候选标签打分（标签须为英文 CLIP 文本提示） */
+  async function classify(imgEl, candidateLabels) {
+    const clf = await ensureZeroShot();
+    const blob = await toBlob(imgEl, 768);
+    const out = await clf(blob, candidateLabels, { skipSpecialTokens: true });
+    return Array.isArray(out) ? out : (out && out[0]) || [];
   }
 
   /** 两个向量的余弦相似度（自行归一化，不依赖上游是否已 normalize） */
@@ -141,5 +188,5 @@
   function serialize(vec) { return vec ? Array.from(vec, (x) => Number(x.toFixed(5))) : null; }
   function deserialize(arr) { return arr ? Float32Array.from(arr) : null; }
 
-  global.PicTraceCLIP = { enable, embed, cosine, serialize, deserialize, state, MODEL_ID };
+  global.PicTraceCLIP = { enable, embed, classify, ensureZeroShot, cosine, serialize, deserialize, state, MODEL_ID };
 })(typeof window !== 'undefined' ? window : globalThis);

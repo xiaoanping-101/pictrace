@@ -65,6 +65,7 @@
 | --- | --- | --- |
 | 原版 `authors: [{alias: …}]` 写法 | `cffconvert --validate` 报作者字段不合规 → GitHub `/citation` 端点 404 | ❌→✅ **已修正**为 entity 写法（`name: xiaoanping-101`）；修正后 cffconvert 报 "Citation metadata are valid according to schema version 1.2.0"，BibTeX 生成正常 |
 | README 手写 BibTeX 与 CFF 一致性 | 已替换为 cffconvert 生成格式（`@misc`，含 month 字段） | ✅ |
+| GitHub 引用按钮（用户可见功能） | 2026-09-18 真实浏览器点击仓库页 "Cite this repository"：弹出 BibTeX `@misc{xiaoanping-101_pictrace, …`，与 CFF 一致。（注：REST `/citation` 端点经本机代理返回 404，属代理访问 API 的边缘现象，不影响页面功能） | ✅ 实测可用 |
 
 ### F. 内部一致性（脚本核对，2026-09-18）
 

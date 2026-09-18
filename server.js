@@ -262,7 +262,7 @@ async function providerBaidu({ buffer, mime, url }) {
   return dedupeBy(items, (it) => it.url).slice(0, 30);
 }
 
-/** SauceNAO：网页表单可直接服务端 POST，返回可解析的结果 HTML（实测可用，注意其限流约 4 次/30 秒） */
+/** SauceNAO：网页表单可直接服务端 POST，返回可解析的结果 HTML（实测可用，注意其短时限流策略） */
 async function providerSauceNao({ buffer, mime, url }) {
   let html;
   if (buffer) {
@@ -342,7 +342,8 @@ const server = http.createServer(async (req, res) => {
 
   // ---- API：健康检查 ----
   if (pathname === '/api/health') {
-    return sendJson(res, 200, { ok: true, fetch: FETCH_ENABLED, version: '1.0.0' });
+    const { version } = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+    return sendJson(res, 200, { ok: true, fetch: FETCH_ENABLED, version });
   }
 
   // ---- API：HF 模型权重中转（供 CLIP 语义模块；服务端出口对 hf-mirror 可达性最好）----

@@ -165,17 +165,7 @@
       keywordOnly: true,
       byKeyword: (k) => `https://openverse.org/search/?q=${encodeURIComponent(k)}`,
     },
-    {
-      id: 'karmadecay',
-      name: 'KarmaDecay',
-      nameZh: 'KarmaDecay（Reddit）',
-      region: 'global',
-      category: 'general',
-      strength: { zh: '帖子在 Reddit 的出现记录', en: 'Reddit post appearances' },
-      byUrl: (u) => `http://karmadecay.com/search?qt=${encodeURIComponent(u)}`,
-      byUpload: null,
-      byKeyword: null,
-    },
+    // 注：KarmaDecay（Reddit 反向搜图）已于 v1.1.1 自检中确认服务停止，移除。
   ];
 
   /**

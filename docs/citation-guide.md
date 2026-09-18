@@ -24,16 +24,15 @@ PicTrace 的定位是**溯源工具**：它帮你找到线索，而最终被引�
 
 ## 2. 引用 PicTrace 软件
 
-### BibTeX
+### BibTeX（与仓库 CITATION.cff 生成结果一致，2026-09-18 经 cffconvert 核验）
 
 ```bibtex
-@software{pictrace2026,
-  author  = {xiaoanping-101},
-  title   = {PicTrace: Open-source Reverse Image Provenance Search Aggregator},
-  year    = {2026},
-  url     = {https://github.com/xiaoanping-101/pictrace},
-  version = {1.0.0},
-  license = {MIT}
+@misc{xiaoanping-101_pictrace,
+  author = {xiaoanping-101},
+  month  = {9},
+  title  = {PicTrace: Open-source Reverse Image Provenance Search Aggregator},
+  url    = {https://github.com/xiaoanping-101/pictrace},
+  year   = {2026}
 }
 ```
 
@@ -41,7 +40,16 @@ PicTrace 的定位是**溯源工具**：它帮你找到线索，而最终被引�
 
 > [1] xiaoanping-101. PicTrace: 开源以图溯源检索平台[CP/OL]. (2026-09-18)[引用日期]. https://github.com/xiaoanping-101/pictrace.
 
-仓库根目录的 [CITATION.cff](../CITATION.cff) 会被 GitHub 自动识别，点击仓库首页 "Cite this repository" 即可导出多种格式。
+仓库根目录的 [CITATION.cff](../CITATION.cff) 会被 GitHub 自动识别，点击仓库首页 "Cite this repository" 即可导出 BibTeX / RIS / EndNote / APA 等格式。
+
+## 2.5 致谢规范（Acknowledgement Norms）
+
+在学术或公开作品中使用 PicTrace 时，除引用本软件外，请按[致谢规范与逐项清单](ACKNOWLEDGEMENTS.md)处理第三方归属：
+
+1. **必须致谢**：对成果有实质贡献的算法/工具（清单第 1–8 项），措辞模板见该文件第三节；
+2. **不得转引为自有**：感知哈希算法（imagehash/pHash/Krawetz）、CLIP 模型（OpenAI）、transformers.js 运行时（Apache-2.0）需按原署名提及；
+3. **许可证敏感**：如你的衍生作品复制了 GPL-3.0 代码（如 dessant/search-by-image 源码），作品整体须转为 GPL-3.0，且不得再以 MIT 二次分发；
+4. **时点数据**：引用 star 数、服务存活等时点数据时注明核验日期（见 [verification-log.md](verification-log.md)）。
 
 ## 3. 引用报告的构成（导出的 Markdown）
 

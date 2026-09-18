@@ -15,7 +15,7 @@
 
 给定一张图片（本地文件、截图粘贴或图片 URL），PicTrace 帮你回答：**"这张图最早/还出现在哪里？"**
 
-- 🖼️ **一次载入，14 个识图引擎同步直达**：Google Lens、Yandex、Bing 可视化搜索、TinEye、百度识图、搜狗识图、360 识图、SauceNAO、IQDB、Ascii2D、trace.moe、搜狗微信文章、Openverse、KarmaDecay
+- 🖼️ **一次载入，13 个识图引擎同步直达**：Google Lens、Yandex、Bing 可视化搜索、TinEye、百度识图、搜狗识图、360 识图、SauceNAO、IQDB、Ascii2D、trace.moe、搜狗微信文章、Openverse（引擎链接均经存活核验，见[自检报告](docs/verification-log.md)）
 - 🔬 **本地取证分析（不上传）**：EXIF 相机/GPS/软件元数据、感知哈希（aHash / dHash / pHash-DCT）
 - 🤖 **服务端聚合检索**：服务器代为向引擎提交图片并解析结果（SauceNAO / IQDB 实测可用；Yandex / Bing / 百度受反爬限制时自动降级为深链）
 - 🏷️ **结果自动分类**：按 **公众号文章（mp.weixin.qq.com）/ 视频 / 社交帖子 / 新闻媒体** 分组过滤
@@ -108,7 +108,7 @@ PicTrace 的模型分为三层：**内置算法模型（本地）**、**可选�
 
 | 模块 | 算法/模型 | 出处与致谢 |
 | --- | --- | --- |
-| 感知哈希 | aHash（均值哈希）、dHash（梯度哈希）、pHash（DCT-II 低频系数中位数二值化，64bit） | [imagehash](https://github.com/JohannesBuchner/imagehash)（BSD-2）、[pHash.org](https://www.phash.org/)、Krawetz (2013) |
+| 感知哈希 | aHash（均值哈希）、dHash（梯度哈希）、pHash（DCT-II 低频系数中位数二值化，64bit） | dHash：Krawetz, [*Kind of Like That*](https://www.hackerfactor.com/blog/?/archives/529-Kind-of-Like-That.html)（2013-01-21）；pHash：[pHash.org 设计文档](https://www.phash.org/docs/design.html)；[imagehash](https://github.com/JohannesBuchner/imagehash)（BSD-2-Clause，已核验） |
 | 近似图判定 | 汉明距离 ≤ 10（pHash/dHash 双指标取最小） | 同上 |
 | 元数据解析 | JPEG APP1(TIFF IFD0/Exif/GPS)、PNG tEXt/iTXt | EXIF 2.3（CIPA DC-008）、PNG ISO/IEC 15948 |
 | 结果分类 | 域名启发式分类器（公众号/视频/社交/新闻） | 本项目原创 |
@@ -121,9 +121,9 @@ PicTrace 的模型分为三层：**内置算法模型（本地）**、**可选�
 
 | 项 | 说明 |
 | --- | --- |
-| 模型 | **CLIP ViT-B/32**（`Xenova/clip-vit-base-patch32`，q8 量化，约 60–90MB） |
-| 原作者 | OpenAI（*Learning Transferable Visual Models From Natural Language Supervision*, ICML 2021）；transformers.js 移植版来自 [Xenova](https://github.com/xenova/transformers.js) |
-| 运行时 | [transformers.js](https://github.com/huggingface/transformers.js) v3，浏览器内 WebGPU/WASM 推理，**图片不离开本机** |
+| 模型 | **CLIP ViT-B/32**（`Xenova/clip-vit-base-patch32`，q8 量化，约 60–90MB；权重页面未标注许可证，商用前请自行核对，原版 OpenAI CLIP 代码为 MIT） |
+| 原论文 | Radford, A. et al. [*Learning Transferable Visual Models From Natural Language Supervision*](https://arxiv.org/abs/2103.00020). ICML 2021.（arXiv:2103.00020，已核验） |
+| 运行时 | [transformers.js](https://github.com/huggingface/transformers.js) v3（Apache-2.0，已核验），浏览器内 WebGPU/WASM 推理，**图片不离开本机**；ONNX 权重为社区 [Xenova](https://huggingface.co/Xenova) 移植 |
 | 用途 | 为本地图库图片生成 512 维归一化视觉嵌入；以余弦相似度（≥ 0.75 阈值）做语义匹配，与感知哈希结果并列展示 |
 | 加载策略 | 点击"启用语义模型"后才动态 import CDN 运行时（jsdelivr → npmmirror → unpkg 回退）；模型权重优先经本地服务器 `/api/hf/*` 中转 hf-mirror.com（大陆网络友好，服务端出口可靠），纯静态托管时回退浏览器直连镜像站；权重由浏览器 Cache API 缓存，仅首次下载较慢；任何失败不影响核心功能 |
 
@@ -187,18 +187,19 @@ flowchart TD
 2. **注明检索工具与时间**，如：
    > 图片出处经 PicTrace（https://github.com/xiaoanping-101/pictrace）于 2026-09-18 检索确认。
 3. 导出的 Markdown 报告已按上述要点预生成条目，正式引用前请按目标出版物规范复核。
-4. 引用本软件本身（BibTeX，另见 [CITATION.cff](CITATION.cff)）：
+4. 引用本软件本身（BibTeX，另见 [CITATION.cff](CITATION.cff)，仓库首页 "Cite this repository" 按钮可导出各格式）：
 
 ```bibtex
-@software{pictrace2026,
-  author  = {xiaoanping-101},
-  title   = {PicTrace: Open-source Reverse Image Provenance Search Aggregator},
-  year    = {2026},
-  url     = {https://github.com/xiaoanping-101/pictrace},
-  version = {1.0.0},
-  license = {MIT}
+@misc{xiaoanping-101_pictrace,
+  author = {xiaoanping-101},
+  month  = {9},
+  title  = {PicTrace: Open-source Reverse Image Provenance Search Aggregator},
+  url    = {https://github.com/xiaoanping-101/pictrace},
+  year   = {2026}
 }
 ```
+
+完整的引用与**致谢规范**（GB/T 7714 / APA / BibTeX / 致谢措辞模板 / 许可证兼容性说明）见 [docs/citation-guide.md](docs/citation-guide.md) 与 [docs/ACKNOWLEDGEMENTS.md](docs/ACKNOWLEDGEMENTS.md)。
 
 ## API
 
@@ -232,10 +233,12 @@ pictrace/
 │       ├── exif.js        # JPEG EXIF / PNG tEXt 精简解析器
 │       └── clip.js        # 可选 CLIP ViT-B/32 本地语义模型（transformers.js 按需加载）
 ├── docs/
-│   ├── research.md        # 同类项目调研报告
-│   ├── citation-guide.md  # 引用规范详解
-│   └── screenshots/       # 运行截图
-├── CITATION.cff           # GitHub 原生引用格式
+│   ├── research.md          # 同类项目调研报告
+│   ├── citation-guide.md    # 引用规范详解
+│   ├── ACKNOWLEDGEMENTS.md  # 致谢规范与逐项致谢清单（许可证已核验）
+│   ├── verification-log.md  # 事实自检报告（防幻觉：逐条声明 + 核验证据）
+│   └── screenshots/         # 运行截图
+├── CITATION.cff           # GitHub 原生引用格式（cffconvert 校验通过）
 ├── CONTRIBUTING.md
 ├── PRIVACY.md
 └── LICENSE                # MIT
@@ -243,14 +246,19 @@ pictrace/
 
 ## 致谢（Acknowledgements）
 
-本项目的开发站在以下开源工作之上（详见[调研报告](docs/research.md)）：
+本项目的开发站在以下开源工作之上（许可证与 star 数均经 GitHub API 于 2026-09-18 核验；逐项说明见[致谢规范](docs/ACKNOWLEDGEMENTS.md)）：
 
-- **[dessant/search-by-image](https://github.com/dessant/search-by-image)**（GPL-3.0）— 引擎清单与 URL 模板的参考来源；
-- **[JohannesBuchner/imagehash](https://github.com/JohannesBuchner/imagehash)**（BSD-2）与 **[pHash](https://www.phash.org/)** — 感知哈希算法思想；
-- **[xemle/home-gallery](https://github.com/xemle/home-gallery)** — 本地图片库感知哈希匹配的实践参考；
+- **[dessant/search-by-image](https://github.com/dessant/search-by-image)**（GPL-3.0，⭐3751）— 引擎清单数据结构的参考来源（本项目未复制其代码，URL 模板属公开事实）；
+- **[JohannesBuchner/imagehash](https://github.com/JohannesBuchner/imagehash)**（BSD-2-Clause，⭐3871）与 **[pHash](https://www.phash.org/docs/design.html)** — 感知哈希算法思想；
+- **[xemle/home-gallery](https://github.com/xemle/home-gallery)**（MIT，⭐1181）— 本地图片库感知哈希匹配的实践参考；
+- **[transformers.js](https://github.com/huggingface/transformers.js)**（Apache-2.0，⭐16301）与 OpenAI CLIP 论文（arXiv:2103.00020）— 语义模型运行时与模型架构；
 - 各识图引擎的公开服务（商标归各自所有，本项目与它们无隶属关系）。
 
 服务端聚合提供器、域名分类器、取证前端与引用报告为本项目原创实现。
+
+## 事实自检（Anti-hallucination）
+
+本项目文档中的全部事实性声明（第三方许可证、star 数、引擎存活、文献 URL、反爬实测）都记录在 [docs/verification-log.md](docs/verification-log.md)，注明核验方法与日期。**自检已纠正三处错误**：编造的 Krawetz 文章 URL、CITATION.cff 作者字段不合规、引擎清单中已停服的 KarmaDecay。
 
 ## 版本历史
 

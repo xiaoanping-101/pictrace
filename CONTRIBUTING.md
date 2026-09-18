@@ -10,8 +10,10 @@
 4. 提交前自测：
    ```bash
    node --check server.js
+   node scripts/consistency-check.js   # 内部一致性自检（引擎计数/版本/文档链接/端点）
    node server.js        # 手动过一遍核心流程
    ```
+5. 涉及第三方事实（许可证、star 数、文献 URL、引擎可用性）的改动，请在 [docs/verification-log.md](docs/verification-log.md) 附上核验方法与结果，避免凭记忆书写（防幻觉规范）。
 5. 提交 Pull Request，说明动机与测试方式。
 
 ## 我们特别欢迎的贡献方向

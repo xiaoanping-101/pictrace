@@ -2,6 +2,7 @@
 
 > 调研日期：2026-09-18 · 调研人：PicTrace 项目作者（在 AI 辅助下完成）
 > 调研方式：GitHub `reverse-image-search` / `google-lens` 主题页（按 star 排序）、Web 检索、各项目 README/Wiki 阅读
+> **事实复核**：文中全部许可证与 star 数已于 2026-09-18 经 GitHub API 复核（方法与证据见 [verification-log.md](verification-log.md)），star 数为该时点快照。
 > 目的：确认"以图溯源聚合检索网站"是否已有成熟开源实现；如有，借鉴其思想并在其基础上继续优化开发。
 
 ## 一、调研结论（TL;DR）
@@ -13,7 +14,7 @@
 
 ## 二、重点调研对象
 
-### 1. dessant/search-by-image ⭐ 3.7k · GPL-3.0 · 浏览器扩展
+### 1. dessant/search-by-image ⭐ 3751 · GPL-3.0 · 浏览器扩展
 
 - **形态**：Chrome/Edge/Safari/Firefox 扩展；右键任意图片即可发送到所选引擎。
 - **能力**：30+ 引擎，每个引擎有 URL 模式和上传模式；高度可配置。
@@ -21,11 +22,11 @@
 - **借鉴点**：引擎注册表的数据结构思想（每个引擎 = 元数据 + byUrl/byUpload 构造器）→ PicTrace 的 `public/engines.js` 采用同构设计，并扩展了 `region/category/strength/serverProvider` 字段与域名分类器。
 - **许可注意**：项目为 GPL-3.0。PicTrace **未复制其任何代码**，仅参考了引擎 URL 模板等公开事实（URL 模板不受版权保护），故 PicTrace 可保持 MIT。若未来直接复制其代码，需遵循 GPL 传染条款。
 
-### 2. Decimation/SmartImage ⭐ 1.3k · 浏览器扩展
+### 2. Decimation/SmartImage ⭐ 1335 · 浏览器扩展（仓库未附许可证文件）
 
 - 类似的多引擎搜图扩展（C#/.NET 系）。**借鉴点**：确认"聚合多引擎"是用户真实需求；其不足（需安装、无取证、无报告）成为 PicTrace 的差异化方向。
 
-### 3. xemle/home-gallery ⭐ 1.2k · 自托管照片库
+### 3. xemle/home-gallery ⭐ 1181 · MIT · 自托管照片库
 
 - **能力**：本地照片库 + AI 语义检索 + 感知哈希去重。
 - **借鉴点**：**本地感知哈希匹配**思想 → PicTrace 的 IndexedDB 图库 + 汉明距离查重（阈值 ≤ 10）。
@@ -68,7 +69,7 @@
 
 | 引擎 | 结果 | 说明 |
 | --- | --- | --- |
-| SauceNAO | ✅ 可用 | 表单 POST 可服务端调用；返回含标题、相似度、源站链接的 HTML；测试图片（Windows 11 默认壁纸）正确命中 DeviantArt 出处（94.8%） |
+| SauceNAO | ✅ 可用 | 表单 POST 可服务端调用；返回含标题、相似度、源站链接的 HTML；测试图片（Windows 11 默认壁纸）正确命中 DeviantArt 出处（94.8%）。注意其短时限流（以其站点说明为准） |
 | IQDB | ✅ 可用 | 同上；返回相似度与图库链接 |
 | Yandex | ⚠️ 反爬 | 上传接口返回机器人验证页（1778 字节 captcha 页） |
 | Bing | ⚠️ 反爬 | SBI 上传接口返回 400 空 body（需要浏览器 Cookie） |

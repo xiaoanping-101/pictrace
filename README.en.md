@@ -12,7 +12,7 @@
 
 Given an image (local file, pasted screenshot, or URL), PicTrace answers: **"Where else does this image appear?"**
 
-- 🖼️ **14 engines, one upload** — Google Lens, Yandex, Bing Visual Search, TinEye, Baidu Graph, Sogou, 360, SauceNAO, IQDB, Ascii2D, trace.moe, Sogou-WeChat articles, Openverse, KarmaDecay
+- 🖼️ **13 engines, one upload** — Google Lens, Yandex, Bing Visual Search, TinEye, Baidu Graph, Sogou, 360, SauceNAO, IQDB, Ascii2D, trace.moe, Sogou-WeChat articles, Openverse (link liveness verified — see the [verification log](docs/verification-log.md))
 - 🔬 **Local forensics (nothing uploaded)** — EXIF camera/GPS/software metadata, perceptual hashes (aHash / dHash / pHash-DCT)
 - 🤖 **Server-side aggregation** — the server submits the image to engines and parses results (SauceNAO / IQDB verified working; Yandex / Bing / Baidu degrade gracefully to deep links when anti-bot measures kick in)
 - 🏷️ **Auto-classified results** — grouped by WeChat official-account articles (`mp.weixin.qq.com`), video, social posts, and news
@@ -57,7 +57,7 @@ See [README.md](README.md) for the CLIP inference flowchart and the full model t
 ```mermaid
 flowchart LR
     A[Image<br/>file/paste/URL] --> B[In-browser forensics<br/>EXIF · aHash/dHash/pHash]
-    B --> C[Engine deep links<br/>14 engines]
+    B --> C[Engine deep links<br/>13 engines]
     B --> F[POST /api/search<br/>server aggregation]
     F --> G[SauceNAO ✓]
     F --> H[IQDB ✓]

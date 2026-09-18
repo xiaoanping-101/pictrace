@@ -6,11 +6,11 @@
  *  - 本地图库查重与历史比对
  *
  * 算法思想来源（公开算法，特此致谢）：
- *  - aHash / dHash: Neal Krawetz, "Kind of Like That" (The Hacker Factor Blog, 2013)
- *    https://hackerfactor.com/blog/index.php%3F/archives/2013/01/13/25.html
- *  - pHash (DCT): Evan Klinger & David Doherty, pHash.org
+ *  - dHash: Neal Krawetz, "Kind of Like That", The Hacker Factor Blog, 2013-01-21
+ *    https://www.hackerfactor.com/blog/?/archives/529-Kind-of-Like-That.html
+ *  - pHash (DCT): pHash 开源库设计文档（phash.org，GitHub: aetilius/pHash）
  *    https://www.phash.org/docs/design.html
- *  - Python imagehash 库的参考实现（BSD-2）
+ *  - Python imagehash 库的参考实现（BSD-2-Clause，URL 已于 2026-09-18 核验）
  *    https://github.com/JohannesBuchner/imagehash
  */
 (function (global) {

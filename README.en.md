@@ -17,7 +17,7 @@ Given an image (local file, pasted screenshot, or URL), PicTrace answers: **"Whe
 - 🤖 **Server-side aggregation** — the server submits the image to engines and parses results (SauceNAO / IQDB verified working; Yandex / Bing / Baidu degrade gracefully to deep links when anti-bot measures kick in)
 - 🏷️ **Auto-classified results** — grouped by WeChat official-account articles (`mp.weixin.qq.com`), video, social posts, and news
 - 🧠 **Content recognition (v1.2)** — on-device CLIP zero-shot classification (22 curated content prompts) recognizes the content type (person/animal/landmark/anime/product…), generates bilingual query terms, and routes to the engines best at "similar people / objects / scenes"
-- 🎯 **Similar-content direct results (v1.3)** — after recognition, the server **fetches and shows real URLs directly in the page** from six keyless public sources (DuckDuckGo images/videos, Openverse, Baidu Images, Bing web via base64-redirect decoding, Wikipedia REST), grouped into similar images / related videos (real bilibili/YouTube/Douyin links with durations) / articles / wiki entries — no more manual visits to aggregator sites
+- 🎯 **Similar-content direct results (v1.3/v1.4) — the main flow, zero clicks** — **loading an image auto-fetches and shows real URLs directly in the page**, no aggregator sites needed: similar images (DuckDuckGo/Openverse/Baidu), **related videos (real bilibili/YouTube/Douyin links with durations)**, articles (Bing decoded), **community posts (Hacker News/Reddit with points & authors)** and wiki entries — 8 keyless sources fetched in parallel; engine deep links are folded into an "Advanced" section for manual verification only
 - 📚 **Citation report export** — Markdown provenance report with retrieval timestamps, hashes, hit links and direct-result entries
 - 🗃️ **Local library dedup** — IndexedDB image library with hamming-distance + optional CLIP semantic matching
 - 🌐 Bilingual UI (中文 / English), dark forensic theme, zero frameworks, zero build, zero npm dependencies
@@ -66,11 +66,11 @@ flowchart LR
     F --> I[Yandex / Bing / Baidu<br/>best-effort, deep-link fallback]
     G & H & I --> J[Normalize + domain classification]
     J --> K[WeChat / video / social / news tabs]
-    B --> M[CLIP recognition v1.2<br/>on-device zero-shot]
+    B --> M[CLIP recognition v1.2<br/>on-device zero-shot · auto on load]
     M --> N[Query terms + entity routing]
-    N --> O[POST /api/discover v1.3<br/>direct fetch]
-    O --> P[DDG images/videos · Openverse<br/>Baidu · Bing web · Wikipedia]
-    P --> Q[Similar images / videos /<br/>articles / wiki — real URLs in-page]
+    N --> O[POST /api/discover v1.3/v1.4<br/>direct fetch · 8 sources]
+    O --> P[DDG images/videos · Openverse · Baidu ·<br/>Bing web · Wikipedia · HN/Reddit posts]
+    P --> Q[Similar images / videos / articles /<br/>posts / wiki — real URLs in-page]
     K & Q --> L[Citation report export]
 ```
 

@@ -227,6 +227,25 @@ button { font: inherit; cursor: pointer; }
 .clip-status:empty { display: none; }
 .warn-hint { color: var(--warn); }
 
+/* ---- 高级折叠区（引擎深链） ---- */
+.adv-details {
+  margin-top: 16px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  background: rgba(22, 27, 34, .5);
+}
+.adv-details summary {
+  cursor: pointer;
+  font-size: .86rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  user-select: none;
+  padding: 4px 0;
+}
+.adv-details summary:hover { color: var(--accent); }
+.adv-details[open] summary { color: var(--accent); margin-bottom: 6px; }
+
 /* ---- 内容识别 ---- */
 .card-sub { font-size: .78rem; color: var(--text-dim); margin: 10px 0 6px; font-weight: 600; }
 .label-bars { display: flex; flex-direction: column; gap: 6px; }

@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '1.3.0';
+  const VERSION = '1.4.0';
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
@@ -77,11 +77,15 @@
       kwFilled: '已填入关键词框，可点击引擎检索',
       platformCat: { video: '视频', article: '文章', qa: '问答' },
       discTitle: '相似内容直达结果（真实网址）',
+      discTitle2: '相似内容直达检索',
+      discAutoHint: '载入图片后自动检索并在下方直接展示真实网址（相似图片 / 相关视频 / 文章网页 / 社区帖子 / 百科词条）。可修改关键词立即重抓。',
+      kwGo2: '检索相似内容',
+      advTitle: '高级：引擎深链与聚合检索（人工核验用）',
       discBusy: '正在抓取相似内容的网址…',
       discDone: (n, ok) => `完成：${n} 条直达网址（${ok} 个数据源）`,
       discRefresh: '用关键词框内容重新检索',
-      discTabs: { all: '全部', image: '相似图片', video: '相关视频', article: '文章网页', wiki: '百科词条' },
-      discNoResults: '没有抓到直达结果——可换一个关键词重试，或用上方引擎深链人工核验。',
+      discTabs: { all: '全部', image: '相似图片', video: '相关视频', article: '文章网页', post: '社区帖子', wiki: '百科词条' },
+      discNoResults: '没有抓到直达结果——可换一个关键词重试，或展开"高级"用引擎深链人工核验。',
     },
     en: {
       tagline: 'Trace any image to its sources across engines',
@@ -144,11 +148,15 @@
       kwFilled: 'Filled into the keyword box — click an engine to search',
       platformCat: { video: 'video', article: 'article', qa: 'Q&A' },
       discTitle: 'Similar content — direct results (real URLs)',
+      discTitle2: 'Similar-content direct search',
+      discAutoHint: 'After loading an image, real URLs (similar images / videos / articles / community posts / wiki) are fetched automatically and shown below. Edit the keyword to re-fetch instantly.',
+      kwGo2: 'Search similar content',
+      advTitle: 'Advanced: engine deep links & aggregation (manual verification)',
       discBusy: 'Fetching direct URLs of similar content…',
       discDone: (n, ok) => `Done: ${n} direct URLs (${ok} sources)`,
       discRefresh: 'Re-search with the keyword box',
-      discTabs: { all: 'All', image: 'Similar images', video: 'Videos', article: 'Articles', wiki: 'Wiki' },
-      discNoResults: 'No direct results — try another keyword, or verify via the engine links above.',
+      discTabs: { all: 'All', image: 'Similar images', video: 'Videos', article: 'Articles', post: 'Posts', wiki: 'Wiki' },
+      discNoResults: 'No direct results — try another keyword, or open "Advanced" for engine deep links.',
     },
   };
   let lang = localStorage.getItem('pt-lang') || 'zh';
@@ -267,6 +275,8 @@
     checkLibraryMatch();
     $('#sec-workbench').scrollIntoView({ behavior: 'smooth', block: 'start' });
     saveHistory();
+    // v1.4：载图即自动直达检索（模型就绪→自动识别取词；否则文件名/EXIF 线索）
+    scheduleAutoDiscover();
   }
 
   function resetWorkbench() {
@@ -577,13 +587,13 @@
       lines.push('');
       lines.push(`> 检索词 Keywords: ${(state.discover.keywords || []).join(' · ')}`);
       lines.push('');
-      const kindName = { image: '相似图片 Similar images', video: '相关视频 Videos', article: '文章网页 Articles', wiki: '百科词条 Wiki' };
+      const kindName = { image: '相似图片 Similar images', video: '相关视频 Videos', article: '文章网页 Articles', post: '社区帖子 Posts', wiki: '百科词条 Wiki' };
       const groups = {};
       for (const [name, r] of Object.entries(state.discover.results)) {
         for (const it of r.items) (groups[it.kind] = groups[it.kind] || []).push({ ...it, engine: name });
       }
       let m = 0;
-      for (const k of ['image', 'video', 'article', 'wiki']) {
+      for (const k of ['image', 'video', 'article', 'post', 'wiki']) {
         if (!groups[k]) continue;
         lines.push(`### ${kindName[k]}`);
         lines.push('');
@@ -719,6 +729,7 @@
     renderClipStatus();
     try {
       await clip.enable(renderClipStatus);
+      localStorage.setItem('pt-clip-auto', '1'); // 记住：后续会话载图自动静默启用
       renderClipStatus();
     } catch { renderClipStatus(); }
   });
@@ -840,7 +851,7 @@
     for (const [name, r] of Object.entries(state.discover.results || {})) {
       for (const it of r.items) all.push({ ...it, engine: name });
     }
-    const kinds = ['image', 'video', 'article', 'wiki'];
+    const kinds = ['image', 'video', 'article', 'post', 'wiki'];
     const counts = { all: all.length };
     for (const k of kinds) counts[k] = all.filter((x) => x.kind === k).length;
 
@@ -854,7 +865,7 @@
       $('#disc-list').innerHTML = `<div class="empty-tip">${t('discNoResults')}</div>`;
       return;
     }
-    const kindIcon = { image: '🖼', video: '▶', article: '📄', wiki: '📚' };
+    const kindIcon = { image: '🖼', video: '▶', article: '📄', post: '💬', wiki: '📚' };
     $('#disc-list').innerHTML = shown.map((it) => {
       let host = '';
       try { host = new URL(it.url).hostname; } catch { /* ignore */ }
@@ -888,6 +899,56 @@
     const kw = $('#keyword-input').value.trim();
     if (kw) runDiscover([kw]);
   });
+
+  $('#btn-discover-main').addEventListener('click', () => {
+    const kw = $('#keyword-input').value.trim();
+    if (kw) runDiscover([kw]);
+    else $('#keyword-input').focus();
+  });
+
+  // ------------------------------------------------------------
+  // 载图自动直达检索（v1.4）：模型就绪→自动识别取词；否则用文件名/EXIF 线索
+  // ------------------------------------------------------------
+  function deriveKeywordsFromMeta() {
+    const toks = [];
+    const stem = (state.fileName || '').replace(/\.[a-z0-9]+$/i, '');
+    const words = stem.split(/[^\u4e00-\u9fffA-Za-z0-9]+/).filter((w) => w.length >= 3 && !/^[0-9a-f]{6,}$/i.test(w));
+    if (words.length) toks.push(words.slice(0, 3).join(' '));
+    const ex = state.analysis && state.analysis.exif;
+    if (ex && typeof ex === 'object') {
+      for (const k of ['ImageDescription', 'Software', 'Model']) {
+        const v = ex[k];
+        if (v && typeof v === 'string' && v.trim().length >= 3) toks.push(v.trim().slice(0, 30));
+      }
+    }
+    return [...new Set(toks)].slice(0, 2);
+  }
+
+  async function scheduleAutoDiscover() {
+    let kws = [];
+    // 用户曾启用过语义模型 → 静默恢复（权重在浏览器 Cache API，秒级）
+    if (!clipReady() && localStorage.getItem('pt-clip-auto') === '1') {
+      try {
+        await clip.enable(renderClipStatus);
+        renderClipStatus();
+      } catch { /* 恢复失败则退回元数据线索 */ }
+    }
+    if (clipReady() && state.imgEl) {
+      try {
+        const res = await window.PicTraceRecognize.recognize(state.imgEl);
+        if (state.imgEl) { // 期间未换图才应用结果
+          state.lastRec = res;
+          renderRecognize(res);
+          kws = (state.recQueries || []).slice(0, 2);
+        }
+      } catch { /* 识别失败→退回元数据线索 */ }
+    }
+    if (!kws.length) kws = deriveKeywordsFromMeta();
+    if (kws.length) {
+      $('#keyword-input').value = kws[0];
+      runDiscover(kws);
+    }
+  }
 
   $('#rec-chips').addEventListener('click', (ev) => {
     const c = ev.target.closest('.chip[data-q]');

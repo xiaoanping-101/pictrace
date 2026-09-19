@@ -121,30 +121,44 @@
           </div>
         </div>
 
-        <!-- 右列：引擎 + 动作 -->
+        <!-- 右列：直达检索为主，引擎深链折叠为高级选项 -->
         <div class="col-right">
           <div class="card">
             <div class="card-title">
-              <span data-i18n="engines">检索引擎（点击直达）</span>
-              <span class="mode-note" id="mode-note" data-i18n="urlModeTip">已识别图片 URL：支持 URL 直搜引擎</span>
+              <span data-i18n="discTitle2">相似内容直达检索</span>
+              <span class="badge">8 数据源 · 免密钥</span>
             </div>
-            <div class="btn-row">
-              <button id="btn-aggregate" class="primary-btn" data-i18n="aggregate">聚合检索（服务端）</button>
-              <button id="btn-open-url-engines" class="ghost-btn" data-i18n="openUrlEngines">打开全部 URL 引擎</button>
-              <button id="btn-copy-links" class="ghost-btn" data-i18n="copyLinks">复制全部链接</button>
-            </div>
-            <div id="engine-grid" class="engine-grid"></div>
-          </div>
-
-          <div class="card">
-            <div class="card-title" data-i18n="keywordSearch">关键词二次检索</div>
-            <p class="hint" data-i18n="keywordHint">识别出的实体 / EXIF 线索可在此补全关键词，检索公众号文章与版权图库：</p>
+            <p class="hint" data-i18n="discAutoHint">载入图片后自动检索并在下方直接展示真实网址（相似图片 / 相关视频 / 文章网页 / 社区帖子 / 百科词条）。可修改关键词立即重抓。</p>
             <div class="url-row">
               <input id="keyword-input" type="text" placeholder="例如：城市名、事件、人物、作品名…" spellcheck="false">
-              <button id="keyword-search" class="primary-btn" data-i18n="kwGo">检索</button>
+              <button id="btn-discover-main" class="primary-btn" data-i18n="kwGo2">检索相似内容</button>
             </div>
-            <div id="keyword-engines" class="engine-grid compact"></div>
           </div>
+
+          <details class="adv-details">
+            <summary data-i18n="advTitle">高级：引擎深链与聚合检索（人工核验用）</summary>
+            <div class="card">
+              <div class="card-title">
+                <span data-i18n="engines">检索引擎（点击直达）</span>
+                <span class="mode-note" id="mode-note" data-i18n="urlModeTip">已识别图片 URL：支持 URL 直搜引擎</span>
+              </div>
+              <div class="btn-row">
+                <button id="btn-aggregate" class="ghost-btn" data-i18n="aggregate">聚合检索（服务端）</button>
+                <button id="btn-open-url-engines" class="ghost-btn" data-i18n="openUrlEngines">打开全部 URL 引擎</button>
+                <button id="btn-copy-links" class="ghost-btn" data-i18n="copyLinks">复制全部链接</button>
+              </div>
+              <div id="engine-grid" class="engine-grid"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-title" data-i18n="keywordSearch">关键词引擎检索</div>
+              <p class="hint" data-i18n="keywordHint">用上方关键词在各引擎/平台打开检索：</p>
+              <div class="btn-row">
+                <button id="keyword-search" class="ghost-btn" data-i18n="kwGo">检索</button>
+              </div>
+              <div id="keyword-engines" class="engine-grid compact"></div>
+            </div>
+          </details>
         </div>
       </div>
     </section>

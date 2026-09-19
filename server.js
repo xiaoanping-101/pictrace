@@ -457,6 +457,37 @@ async function discBingWeb(kw) {
   return items;
 }
 
+/** Hacker News 帖子（Algolia 官方免密钥 API，稳定） */
+async function discHN(kw) {
+  const txt = await getText(
+    `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(kw)}&hitsPerPage=8`,
+    {}
+  );
+  const j = JSON.parse(txt);
+  return (j.hits || []).map((h) => ({
+    kind: 'post', engine: 'hacker-news',
+    title: ((h.title || h.story_title || '') + (h.points != null ? ` · ${h.points} points` : '')).slice(0, 140),
+    url: h.url || (h.objectID ? `https://news.ycombinator.com/item?id=${h.objectID}` : ''),
+    thumb: '', source: `news.ycombinator.com · ${h.author || ''}`,
+  })).filter((x) => x.url);
+}
+
+/** Reddit 帖子（search.json；部分数据中心 IP 会被拒，失败自动降级） */
+async function discReddit(kw) {
+  const txt = await getText(
+    `https://www.reddit.com/search.json?q=${encodeURIComponent(kw)}&limit=8&sort=relevance`,
+    { 'User-Agent': 'PicTrace/1.0 (open-source image provenance tool)' }
+  );
+  const j = JSON.parse(txt);
+  return ((j.data && j.data.children) || []).map((c) => ({
+    kind: 'post', engine: 'reddit',
+    title: ((c.data.title || '') + (c.data.num_comments != null ? ` · ${c.data.num_comments} comments` : '')).slice(0, 140),
+    url: 'https://www.reddit.com' + c.data.permalink,
+    thumb: (c.data.thumbnail && /^https?:/.test(c.data.thumbnail)) ? c.data.thumbnail : '',
+    source: 'r/' + (c.data.subreddit || ''),
+  })).filter((x) => x.url);
+}
+
 const DISCOVER_PROVIDERS = {
   'ddg-images': discDDGImages,
   'ddg-videos': discDDGVideos,
@@ -464,6 +495,8 @@ const DISCOVER_PROVIDERS = {
   'wiki': discWiki,
   'baidu-images': discBaiduImages,
   'bing-web': discBingWeb,
+  'hacker-news': discHN,
+  'reddit': discReddit,
 };
 
 // ---------------------------------------------------------------

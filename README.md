@@ -19,14 +19,15 @@
 - 🔬 **本地取证分析（不上传）**：EXIF 相机/GPS/软件元数据、感知哈希（aHash / dHash / pHash-DCT）
 - 🤖 **服务端聚合检索**：服务器代为向引擎提交图片并解析结果（SauceNAO / IQDB 实测可用；Yandex / Bing / 百度受反爬限制时自动降级为深链）
 - 🏷️ **结果自动分类**：按 **公众号文章（mp.weixin.qq.com）/ 视频 / 社交帖子 / 新闻媒体** 分组过滤
-- 🧠 **内容识别与相似检索（v1.2）**：CLIP 零样本分类在本地识别图片内容类型（人物/动物/地标/动漫/商品…），自动生成检索词，**路由到最擅长"相似人物/物体/场景"的引擎**，并一键直达 B站/YouTube/抖音/微博/知乎/微信文章等平台的同类内容检索——回答"哪里还有这个人/物的其他公开图片、文章、视频"
+- 🧠 **内容识别与相似检索（v1.2）**：CLIP 零样本分类在本地识别图片内容类型（人物/动物/地标/动漫/商品…），自动生成检索词，**路由到最擅长"相似人物/物体/场景"的引擎**，并一键直达 B站/YouTube/抖音/微博/知乎/微信文章等平台的同类内容检索
+- 🎯 **相似内容直达结果（v1.3）**：识别后服务器**直接抓取并页内展示真实网址**——相似图片（DuckDuckGo/Openverse/百度图片）、**相关视频（真实 B站/抖音/YouTube 链接含时长）**、文章网页（必应解码）、百科词条（维基百科），全部免密钥公开接口，按 相似图片/相关视频/文章网页/百科词条 分组，一键复制到引用报告
 - 📚 **引用报告导出**：一键生成含检索时间、哈希、命中链接的 Markdown 溯源报告，条目按 GB/T 7714 顺序编码格式要点生成
 - 🗃️ **本地图库查重**：图片加入 IndexedDB 图库后，用汉明距离自动匹配近似图；v1.1 起可启用 **CLIP ViT-B/32 本地语义模型**（transformers.js，浏览器内推理），按语义相似度匹配图片
 - 🌐 **中英双语界面**，深色取证风，无框架、无构建、零 npm 依赖
 
-| 首页 | 工作台 + 聚合结果 | 语义模型与图库匹配（v1.1） | 内容识别与相似检索（v1.2） |
-| --- | --- | --- | --- |
-| ![home](docs/screenshots/home.png) | ![workbench](docs/screenshots/workbench-results.png) | ![semantic](docs/screenshots/semantic-model.png) | ![recognition](docs/screenshots/content-recognition.png) |
+| 首页 | 工作台 + 聚合结果 | 语义模型与图库匹配（v1.1） | 内容识别与相似检索（v1.2） | 相似内容直达网址（v1.3） |
+| --- | --- | --- | --- | --- |
+| ![home](docs/screenshots/home.png) | ![workbench](docs/screenshots/workbench-results.png) | ![semantic](docs/screenshots/semantic-model.png) | ![recognition](docs/screenshots/content-recognition.png) | ![direct](docs/screenshots/direct-results.png) |
 
 > 截图为真实运行画面：右侧聚合结果中的 "Dog Loves You More Than He Loves Himself (55.51%)" 即 SauceNAO 对测试图片返回的真实出处。
 
@@ -181,24 +182,38 @@ flowchart TD
 
 ### 内容识别与相似检索（v1.2 新增）
 
-回答"哪里还有**这个人/物**的其他公开照片、文章、视频"——不只是找同一张图的转载：
+回答"哪里还有**这个人/物**的其他公开照片、文章、视频"——不只是找同一张图的转载。**v1.3 起进一步升级为"直达结果"模式：服务器直接抓取真实网址并在页内展示，无需再手动打开聚合网站。**
 
 ```mermaid
 flowchart TD
     A[上传图片] --> B[CLIP 零样本分类<br/>22 类内容提示 · 本地推理]
-    B --> C[内容类型 Top-5<br/>含置信度]
-    C --> D[自动生成检索词<br/>中英双语 chips · 可编辑]
-    C --> E{实体路由}
-    E -- 人物 --> F[Yandex / Lens / Bing / 百度<br/>相似人物其他公开照片]
-    E -- 动物/地标/场景/美食 --> G[Lens / Yandex / 百度 …]
-    E -- 动漫/影视 --> H[SauceNAO / IQDB / Ascii2D / trace.moe]
-    E -- 商品/Logo --> I[Lens / Bing / 百度 / 360]
-    D --> J[文章/视频平台直达<br/>B站 · YouTube · 抖音 · 优酷<br/>微博 · 知乎 · 微信文章 · 百度/Google 新闻]
-    F & G & H & I --> K[其他公开图片/文章/视频网址]
-    J --> K
+    B --> C[内容类型 Top-5 + 置信度]
+    C --> D[自动生成检索词<br/>中英双语 chips · 可点击切换]
+    D --> E1[🎯 直达结果 /api/discover<br/>v1.3 · 页内直接展示真实网址]
+    D --> E2[实体路由引擎深链<br/>相似人物/物体图源核验]
+    D --> E3[文章/视频平台直达链接]
+    E1 --> F1[DuckDuckGo 图片/视频<br/>i.js / v.js 免密钥]
+    E1 --> F2[Openverse CC 图库 API<br/>图片+托管页 URL]
+    E1 --> F3[百度图片 acjson<br/>缩略图+中文标题]
+    E1 --> F4[必应网页<br/>u=a1 base64 重定向解码]
+    E1 --> F5[维基百科 REST 搜索<br/>zh 优先 en 兜底]
+    F1 & F2 & F3 & F4 & F5 --> G[按 相似图片 / 相关视频 /<br/>文章网页 / 百科词条 分组展示]
+    G --> H[并入引用报告导出]
+    E2 & E3 --> I[人工核验与平台检索兜底]
 ```
 
-说明：检索词由 CLIP 识别的类型自动生成（中/英各一条，可一键填入关键词框）；人物类型路由带隐私警示（见 [PRIVACY.md](PRIVACY.md)），平台直达表为公开站点搜索 URL（见 [自检报告](docs/verification-log.md)）。
+**直达数据源（全部免密钥公开接口，2026-09-19 实测，证据见[自检报告](docs/verification-log.md)）**：
+
+| 数据源 | 返回内容 | 实测 |
+| --- | --- | --- |
+| DuckDuckGo `i.js` | 相似图片：托管页 URL + 图址 | ✅ |
+| DuckDuckGo `v.js` | **相关视频：真实 B站/抖音/YouTube 链接 + 时长 + 发布者** | ✅ |
+| Openverse API | CC 授权图库：图片 + Flickr/Wikimedia 托管页 | ✅ |
+| 百度图片 `acjson` | 相似图片缩略图 + 中文标题 | ✅ |
+| 必应网页搜索 | 文章/网页真实 URL（`u=a1` base64 重定向解码） | ✅ |
+| 维基百科 REST | 百科词条 URL（中/英） | ✅ |
+
+说明：检索词由 CLIP 识别的类型自动生成（中/英各一条，点击 chip 可切换并即时重新抓取）；人物类型路由带隐私警示（见 [PRIVACY.md](PRIVACY.md)）；各数据源均可能因反爬策略波动，单源失败自动降级、不影响其它源。
 
 ## 引用规范（How to Cite）
 
@@ -230,6 +245,7 @@ flowchart TD
 | `/api/health` | GET | 健康检查（含聚合开关状态） |
 | `/api/img` | POST | 原始图片字节体 → `{id}`（内存保存 30 分钟） |
 | `/api/search` | POST | `{id 或 url, engines?}` → 各引擎状态与命中列表 |
+| `/api/discover` | POST | `{keywords[]}` → 相似内容直达结果（图片/视频/文章/百科真实 URL，v1.3） |
 | `/api/proxy?url=` | GET | 图片代理（供前端跨域取证） |
 | `/api/hf/*` | GET | 模型权重中转（hf-mirror.com，供 CLIP 模块，大陆网络友好） |
 | `/img/:id` | GET | 取回已上传图片 |

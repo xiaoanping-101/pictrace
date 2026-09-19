@@ -54,7 +54,7 @@ ok('README API 表含 /api/hf', readme.includes('/api/hf'));
 ok('server.js 健康检查不硬编码版本', !/version: '1.d+.d+'/m.test(server));
 
 // 5. 截图文件存在
-for (const shot of ['home.png', 'workbench-results.png', 'semantic-model.png']) {
+for (const shot of ['home.png', 'workbench-results.png', 'semantic-model.png', 'direct-results.png', 'content-recognition.png']) {
   ok('截图存在 docs/screenshots/' + shot, fs.existsSync(path.join(root, 'docs/screenshots', shot)));
 }
 

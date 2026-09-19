@@ -325,6 +325,148 @@ const PROVIDERS = {
 };
 
 // ---------------------------------------------------------------
+// 相似内容直达提供器（v1.3）：关键词 → 真实结果 URL（免密钥公开接口）
+// 全部于 2026-09-19 实测可用（详见 docs/verification-log.md）
+// ---------------------------------------------------------------
+
+/** DuckDuckGo 的 vqd 令牌（两步取，按查询缓存 10 分钟） */
+const vqdCache = new Map(); // q -> {vqd, ts}
+async function getVqd(q) {
+  const hit = vqdCache.get(q);
+  if (hit && Date.now() - hit.ts < 10 * 60 * 1000) return hit.vqd;
+  const html = await getText(`https://duckduckgo.com/?q=${encodeURIComponent(q)}&iax=images&ia=images`);
+  const vqd = (html.match(/vqd=["']?([\d-]+)["']?/) || [])[1];
+  if (!vqd) throw new Error('no vqd token');
+  vqdCache.set(q, { vqd, ts: Date.now() });
+  return vqd;
+}
+
+/** DDG 图片：页面 URL + 图址（i.js） */
+async function discDDGImages(kw) {
+  const vqd = await getVqd(kw);
+  const txt = await getText(
+    `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(kw)}&vqd=${vqd}&f=,,,&p=1`,
+    { Referer: 'https://duckduckgo.com/' }
+  );
+  const j = JSON.parse(txt);
+  return (j.results || []).slice(0, 12).map((x) => ({
+    kind: 'image', engine: 'ddg-images',
+    title: (x.title || '').slice(0, 120) || (x.source || 'image'),
+    url: x.url || x.image, thumb: x.thumbnail || x.image, source: x.source || '',
+  })).filter((x) => x.url);
+}
+
+/** DDG 视频：真实视频页 URL（v.js，含 YouTube 等；vqd 必须与查询词一致） */
+async function discDDGVideos(kw) {
+  const vqd = await getVqd(kw);
+  const txt = await getText(
+    `https://duckduckgo.com/v.js?l=us-en&o=json&q=${encodeURIComponent(kw)}&vqd=${vqd}&f=,,,&p=1`,
+    { Referer: 'https://duckduckgo.com/' }
+  );
+  const j = JSON.parse(txt);
+  return (j.results || []).slice(0, 10).map((x) => ({
+    kind: 'video', engine: 'ddg-videos',
+    title: ((x.title || '') + (x.duration ? ` (${x.duration})` : '')).slice(0, 140),
+    url: x.url || x.content, thumb: (x.images && (x.images.large || x.images.motion)) || '',
+    source: x.publisher || '',
+  })).filter((x) => x.url);
+}
+
+/** Openverse：CC 授权图库（图片 URL + 托管页面 URL） */
+async function discOpenverse(kw) {
+  const txt = await getText(
+    `https://api.openverse.org/v1/images/?q=${encodeURIComponent(kw)}&page_size=12`,
+    {}
+  );
+  const j = JSON.parse(txt);
+  return (j.results || []).map((x) => ({
+    kind: 'image', engine: 'openverse',
+    title: (x.title || '').slice(0, 120) || 'openverse image',
+    url: x.foreign_landing_url || x.url, thumb: x.thumbnail || x.url,
+    source: x.source ? `${x.source}${x.creator ? ' · ' + x.creator : ''}` : '',
+  })).filter((x) => x.url);
+}
+
+/** 维基百科：词条文章 URL（中文优先，空则英文） */
+async function discWiki(kw) {
+  const item = (host, p) => ({
+    kind: 'wiki', engine: 'wiki',
+    title: (p.title || p.key || '').slice(0, 120),
+    url: `https://${host}.wikipedia.org/wiki/${encodeURIComponent(p.key)}`,
+    thumb: (p.thumbnail && p.thumbnail.url && (p.thumbnail.url.startsWith('http') ? p.thumbnail.url : `https://${host}.wikipedia.org${p.thumbnail.url}`)) || '',
+    source: host + '.wikipedia.org' + (p.description ? ' · ' + p.description : ''),
+  });
+  for (const host of ['zh', 'en']) {
+    try {
+      const txt = await getText(
+        `https://${host}.wikipedia.org/w/rest.php/v1/search/page?q=${encodeURIComponent(kw)}&limit=4`,
+        {}
+      );
+      const pages = (JSON.parse(txt).pages || []).map((p) => item(host, p));
+      if (pages.length) return pages;
+    } catch { /* 尝试下一个语言 */ }
+  }
+  return [];
+}
+
+/** 百度图片：缩略图 + 中文标题（acjson 返回非法 JSON，改用正则逐字段提取） */
+async function discBaiduImages(kw) {
+  const txt = await getText(
+    `https://image.baidu.com/search/acjson?tn=resultjson_com&ipn=rj&word=${encodeURIComponent(kw)}&pn=0&rn=12`,
+    { Referer: 'https://image.baidu.com/' }
+  );
+  const unesc = (s) => {
+    try { return JSON.parse('"' + s + '"'); } catch { return s; }
+  };
+  const thumbs = [...txt.matchAll(/"thumbURL":"((?:[^"\\]|\\.)*)"/g)].map((m) => unesc(m[1]));
+  const titles = [...txt.matchAll(/"fromPageTitleEnc":"((?:[^"\\]|\\.)*)"/g)].map((m) => unesc(m[1]));
+  const hovers = [...txt.matchAll(/"hoverURL":"((?:[^"\\]|\\.)*)"/g)].map((m) => unesc(m[1]));
+  const items = [];
+  for (let i = 0; i < thumbs.length && items.length < 12; i++) {
+    if (!/^https?:\/\//.test(thumbs[i])) continue;
+    items.push({
+      kind: 'image', engine: 'baidu-images',
+      title: (titles[i] || '').slice(0, 120) || '百度图片',
+      url: (hovers[i] && hovers[i].startsWith('http') ? hovers[i] : thumbs[i]) || thumbs[i],
+      thumb: thumbs[i], source: 'image.baidu.com',
+    });
+  }
+  return items;
+}
+
+/** 必应网页：结果重定向 u=a1<base64> 解码为真实网页 URL */
+async function discBingWeb(kw) {
+  const html = await getText(
+    `https://www.bing.com/search?q=${encodeURIComponent(kw)}&count=14`,
+    { 'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8' }
+  );
+  const seen = new Set();
+  const items = [];
+  for (const m of html.matchAll(/u=a1([A-Za-z0-9+/=]{20,})/g)) {
+    let real;
+    try { real = Buffer.from(m[1], 'base64').toString('utf8'); } catch { continue; }
+    if (!/^https?:\/\//.test(real)) continue;
+    let host = '';
+    try { host = new URL(real).hostname; } catch { continue; }
+    if (/(^|\.)((bing|microsoft|msn|go\.microsoft)\.[a-z.]+)$/i.test(host)) continue;
+    if (seen.has(real)) continue;
+    seen.add(real);
+    items.push({ kind: 'article', engine: 'bing-web', title: host, url: real, thumb: '', source: host });
+    if (items.length >= 8) break;
+  }
+  return items;
+}
+
+const DISCOVER_PROVIDERS = {
+  'ddg-images': discDDGImages,
+  'ddg-videos': discDDGVideos,
+  'openverse': discOpenverse,
+  'wiki': discWiki,
+  'baidu-images': discBaiduImages,
+  'bing-web': discBingWeb,
+};
+
+// ---------------------------------------------------------------
 // HTTP 服务
 // ---------------------------------------------------------------
 const server = http.createServer(async (req, res) => {
@@ -500,6 +642,54 @@ const server = http.createServer(async (req, res) => {
       results[r.engine] = { status: r.status, link: r.link, message: r.message || null, items: r.items };
     }
     return sendJson(res, 200, { ts: new Date().toISOString(), results });
+  }
+
+  // ---- API：相似内容直达检索（v1.3：关键词 → 真实结果 URL）----
+  if (pathname === '/api/discover' && req.method === 'POST') {
+    let payload;
+    try {
+      payload = JSON.parse((await readBody(req, 1024 * 64)).toString('utf8') || '{}');
+    } catch {
+      return sendJson(res, 400, { error: 'invalid json' });
+    }
+    const keywords = (Array.isArray(payload.keywords) ? payload.keywords : [])
+      .map((k) => String(k).trim())
+      .filter(Boolean)
+      .slice(0, 2); // 最多两个关键词，避免请求轰炸
+    if (!keywords.length) return sendJson(res, 400, { error: 'need keywords[]' });
+    if (!FETCH_ENABLED) {
+      return sendJson(res, 200, { ts: new Date().toISOString(), keywords, disabled: true, results: {} });
+    }
+
+    const engines = (Array.isArray(payload.engines) && payload.engines.filter((e) => DISCOVER_PROVIDERS[e]).length)
+      ? payload.engines.filter((e) => DISCOVER_PROVIDERS[e])
+      : Object.keys(DISCOVER_PROVIDERS);
+
+    // 关键词 × 引擎 全并行（关键词最多 2，引擎 6 → 最多 12 个上游请求）
+    const jobs = [];
+    for (const kw of keywords) {
+      for (const name of engines) {
+        jobs.push(
+          DISCOVER_PROVIDERS[name](kw)
+            .then((items) => ({ kw, name, status: items.length ? 'ok' : 'no_results', items }))
+            .catch((e) => ({ kw, name, status: 'error', items: [], message: String(e.message || e).slice(0, 100) }))
+        );
+      }
+    }
+    const settled = await Promise.all(jobs);
+    // 归并：results[engine] = {status, items}（多关键词的 items 拼接去重）
+    const results = {};
+    for (const r of settled) {
+      const slot = (results[r.name] = results[r.name] || { status: 'error', items: [], message: null });
+      if (r.status === 'ok') slot.status = 'ok';
+      if (r.status === 'error' && slot.status !== 'ok') slot.message = r.message;
+      slot.items.push(...r.items.map((it) => ({ ...it, kw: r.kw })));
+    }
+    const seen = new Set();
+    for (const slot of Object.values(results)) {
+      slot.items = slot.items.filter((it) => (seen.has(it.url) ? false : (seen.add(it.url), true))).slice(0, 24);
+    }
+    return sendJson(res, 200, { ts: new Date().toISOString(), keywords, results });
   }
 
   // ---- 静态文件 ----

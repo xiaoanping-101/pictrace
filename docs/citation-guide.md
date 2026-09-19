@@ -58,17 +58,22 @@ PicTrace 的"导出引用报告"包含以下要素，均带生成时间戳：
 1. 目标图片信息（尺寸、格式、感知哈希 pHash/dHash/aHash）；
 2. 各引擎检索链接（可复现）；
 3. 服务端聚合命中列表（含来源域名与检索日期）；
-4. 免责与复核提示。
+4. **相似内容直达结果（v1.3）**：按 相似图片 / 相关视频 / 文章网页 / 百科词条 分组的真实网址，逐条含来源数据源与检索日期；
+5. 免责与复核提示。
 
 报告示例（节选）：
 
 ```markdown
 # 图片溯源检索报告 / PicTrace Report
-> 生成时间 Generated: 2026-09-18T13:38:42Z
-> 工具 Tool: PicTrace v1.0.0 — https://github.com/xiaoanping-101/pictrace
+> 生成时间 Generated: 2026-09-19T03:04:30Z
+> 工具 Tool: PicTrace v1.3.0 — https://github.com/xiaoanping-101/pictrace
 > 感知哈希 Perceptual hashes: pHash=4000000000000000 dHash=dc9e3632378ecccc aHash=fec38383c2e2e66e
 ## 2. 服务端聚合命中 / Server-side hits
-1. Dog Loves You More Than He Loves Himself. deviantart.com. <https://deviantart.com/view/xxx> (retrieved 2026-09-18, via saucenao)
+1. Dog Loves You More Than He Loves Himself. deviantart.com. <https://deviantart.com/view/xxx> (retrieved 2026-09-19, via saucenao)
+## 3. 相似内容直达 / Similar-content direct results
+> 检索词 Keywords: 商品 同款 · product
+### 相关视频 Videos
+1. 现场实操!复刻60秒爆款带货视频 (25:06). bilibili.com. <https://www.bilibili.com/video/BV1xxxx> (retrieved 2026-09-19, via ddg-videos)
 ```
 
 ## 4. 使用边界（重要）

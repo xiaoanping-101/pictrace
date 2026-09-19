@@ -67,14 +67,28 @@
 | README 手写 BibTeX 与 CFF 一致性 | 已替换为 cffconvert 生成格式（`@misc`，含 month 字段） | ✅ |
 | GitHub 引用按钮（用户可见功能） | 2026-09-18 真实浏览器点击仓库页 "Cite this repository"：弹出 BibTeX `@misc{xiaoanping-101_pictrace, …`，与 CFF 一致。（注：REST `/citation` 端点经本机代理返回 404，属代理访问 API 的边缘现象，不影响页面功能） | ✅ 实测可用 |
 
-### F. 内部一致性（脚本核对，2026-09-18）
+### F. 内部一致性（脚本核对，2026-09-18；2026-09-19 复跑通过）
 
 | 项 | 结果 |
 | --- | --- |
 | 引擎计数（engines.js 实际 vs 文档宣称） | 移除 KarmaDecay后为 **13**；README/README.en/package.json/仓库描述已同步 |
-| 版本号（package.json / CITATION.cff / app.js VERSION / CHANGELOG） | 统一为 **1.1.1** |
+| 版本号（package.json / CITATION.cff / app.js VERSION / CHANGELOG） | 统一为当前发版号（2026-09-19 起为 **1.3.0**） |
 | README 相对链接目标文件均存在 | 脚本核对通过（CHANGELOG/ACKNOWLEDGEMENTS/verification-log/citation-guide/research/PRIVACY/CONTRIBUTING/LICENSE/截图） |
-| 服务器端点与 README API 表一致 | health/img/search/proxy/hf/img 六个端点一致 |
+| 服务器端点与 README API 表一致 | health/img/search/**discover**/proxy/hf/img 七个端点一致（v1.3 增补 discover 检查项） |
+
+### G. 相似内容直达数据源（v1.3，2026-09-19 实测）
+
+| 数据源 | 接口性质 | 核验方法与证据 | 结论 |
+| --- | --- | --- | --- |
+| DuckDuckGo 图片 `i.js` | **非官方未文档化接口**（两步取 vqd） | 服务端请求返回 JSON：字段 `title/url/image/thumbnail/source`，实测 24 条 | ✅ 可用；随时可能变动，已按"单源失败自动降级"设计 |
+| DuckDuckGo 视频 `v.js` | **非官方未文档化接口**（vqd 须与查询词一致） | 实测返回真实视频 URL（YouTube 等，含时长/发布者）；E2E 实测中文检索词返回 B站/抖音链接 20 条 | ✅ 可用；同上风险提示 |
+| Openverse API `api.openverse.org/v1/images` | 官方公开 API（免密钥，限流） | 实测 `result_count: 240`，字段含 `url`（图址）与 `foreign_landing_url`（托管页，如 Flickr） | ✅ |
+| 百度图片 `acjson` | **非官方接口**；返回体为非法 JSON | 实测响应含未转义字符导致 JSON.parse 失败 → 改用正则逐字段提取 `thumbURL/hoverURL/fromPageTitleEnc`，实测 24 条 | ✅（解析方式已按实测修正） |
+| 必应网页搜索 HTML | 网页解析（结果为 `u=a1` base64 重定向） | 实测解码得到真实文章 URL（如 en.wikipedia.org/wiki/Dog），过滤 bing/microsoft 域后 8 条 | ✅ |
+| 维基百科 REST `w/rest.php/v1/search/page` | 官方公开 API | 中/英均 200；中文"埃菲尔铁塔"返回 3 词条 | ✅ |
+| Bing 图片 `images/async` | 网页解析 | 2026-09-18 与 09-19 两次实测均 210KB 但无数据字段（`iusc` 仅存在于 CSS） | ❌ 已放弃（不采用） |
+
+E2E 证据（2026-09-19）：壁纸图片 → CLIP 识别"商品图"→ 自动 `/api/discover` → 页内展示 **92 条直达网址**（相似图片 48 / 相关视频 20 / 文章网页 16 / 百科词条 8，5 源命中），截图 `docs/screenshots/direct-results.png`。
 
 ## 三、本轮自检发现并已修复的失实（3 处）
 
@@ -92,3 +106,4 @@
 ## 五、自检脚本最新运行记录
 
 - 2026-09-18（v1.1.1）：62 项检查全部通过（引擎计数 13、版本 1.1.1 四处一致、文档链接 39 个目标存在、服务器端点 6 个一致、致谢关键链接 6 个在册）。
+- 2026-09-19（v1.3.0）：75 项检查全部通过（新增 `/api/discover` 端点、`sec-discover` 直达结果区、`direct-results.png` 截图与 README 提及共 13 项检查；CITATION.cff 经 cffconvert 复验通过）。

@@ -23,6 +23,7 @@
 | 7 | [transformers.js](https://github.com/huggingface/transformers.js) ⭐16301 | **Apache-2.0** | 浏览器端运行 transformers 模型的运行时（按需从 CDN 加载） | 本项目不含其源码；Apache-2.0 允许此类使用，启动时于界面标注 |
 | 8 | `Xenova/clip-vit-base-patch32`（Hugging Face） | **权重页面未标注许可证**（2026-09-18 经 HF API 核验；原版 OpenAI CLIP 代码为 MIT） | CLIP ViT-B/32 的 ONNX q8 量化权重 | 首次启用时从镜像站下载至**用户浏览器**缓存，本项目仓库不含权重文件；商用前请自行核对模型页许可证 |
 | 9 | 各识图引擎（Google Lens、Yandex、Bing、TinEye、百度、搜狗、360、SauceNAO、IQDB、Ascii2D、trace.moe、Openverse、搜狗微信） | 各自服务条款 | 公开检索服务（深链或表单提交） | 商标归各自所有者；本项目与它们无隶属、不破解其反爬措施 |
+| 10 | **相似内容直达数据源（v1.3）**：DuckDuckGo `i.js`/`v.js`、Openverse API、百度图片 `acjson`、必应网页搜索、维基百科 REST API | 各自服务条款；其中 **DDG 两接口与百度 acjson 为非官方未文档化接口**，Openverse 与维基为官方公开 API | 服务器按关键词调用其公开入口，抓取结果 URL 在页内展示；本项目不缓存、不分发其内容 | 非官方接口随时可能失效——已按"单源失败自动降级"设计并在[自检报告](verification-log.md)留痕；正式引用命中条目时请以目标页面为准 |
 
 **原创部分声明**：服务端聚合提供器（含 Yandex/Bing/百度/SauceNAO/IQDB 的解析器）、域名分类器（公众号/视频/社交/新闻）、浏览器端 EXIF/PNG 解析器、IndexedDB 图库与语义匹配、引用报告导出、模型权重中转端点（`/api/hf/*`）及全部 UI/文档，为本项目原创（MIT）。
 

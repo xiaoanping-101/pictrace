@@ -15,9 +15,12 @@ abstract: >-
   provenance: load an image once and search it across major reverse-image
   engines (Google Lens, Yandex, Bing, TinEye, Baidu, Sogou, SauceNAO,
   IQDB, ...), with in-browser EXIF forensics, perceptual hashes
-  (aHash/dHash/pHash), an optional on-device CLIP ViT-B/32 semantic
-  model, server-side aggregation, WeChat-article / video / social result
-  classification, and citation-ready Markdown reporting.
+  (aHash/dHash/pHash), an optional on-device CLIP ViT-B/32 model that
+  recognizes image content type (zero-shot) and powers similar-content
+  discovery — the server directly fetches real URLs of similar images,
+  related videos, articles and wiki entries from keyless public sources —
+  plus WeChat-article / video / social classification and citation-ready
+  Markdown reporting.
 keywords:
   - reverse-image-search
   - image-provenance

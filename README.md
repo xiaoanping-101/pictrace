@@ -67,7 +67,12 @@ flowchart LR
     F --> I[Yandex / Bing / 百度<br/>尽力而为·失败降级为深链]
     G & H & I --> J[结果归一化 + 域名分类]
     J --> K[公众号 / 视频 / 社交 / 新闻 分组]
-    K --> L[引用报告导出<br/>Markdown / JSON]
+    B --> M[CLIP 内容识别<br/>v1.2 · 本地零样本]
+    M --> N[检索词 + 实体路由]
+    N --> O[POST /api/discover<br/>v1.3 · 直达抓取]
+    O --> P[DDG 图片/视频 · Openverse<br/>百度图片 · 必应网页 · 维基]
+    P --> Q[相似图片 / 相关视频 /<br/>文章网页 / 百科词条 · 真实网址]
+    K & Q --> L[引用报告导出<br/>Markdown / JSON]
 ```
 
 ### 检索时序（以聚合检索为例）
@@ -85,6 +90,31 @@ sequenceDiagram
     S->>S: 解析·归一化·按域名分类·去重
     S-->>U: { 各引擎状态 + 命中列表 + 兜底深链 }
     U->>U: 分组渲染 / 导出引用报告
+```
+
+### 相似内容直达时序（v1.3，识别自动触发）
+
+```mermaid
+sequenceDiagram
+    participant U as 用户浏览器
+    participant C as CLIP（本地推理）
+    participant S as PicTrace 服务器
+    participant D as 免密钥数据源
+    U->>C: 图片
+    C-->>U: 内容类型 Top-5 + 建议检索词
+    U->>S: POST /api/discover { keywords[] }
+    par 并行（关键词 ≤ 2 × 数据源 6）
+        S->>D: DDG i.js / v.js（vqd 两步）
+        S->>D: Openverse API
+    and
+        S->>D: 百度图片 acjson
+        S->>D: 必应网页（u=a1 base64 解码）
+        S->>D: 维基百科 REST（zh→en）
+    end
+    D-->>S: 真实结果（页面 URL / 图址 / 视频链接 / 词条）
+    S->>S: 归一化 {kind,title,url,thumb,source} · 按 URL 去重
+    S-->>U: 分组直达结果（图片/视频/文章/百科）
+    U->>U: 页内展示真实网址 · 并入引用报告
 ```
 
 ### 感知哈希比对原理
@@ -143,6 +173,9 @@ flowchart TD
     H --> J[余弦相似度匹配<br/>阈值 ≥ 0.75]
     I --> J
     J --> K[与感知哈希命中并列展示<br/>语义相似度 xx.x% · hamming ≈ n]
+    G --> Z[零样本分类 v1.2<br/>22 类内容文本提示]
+    Z --> Y[内容类型 Top-5 + 检索词]
+    Y --> X[实体路由引擎 v1.2<br/>＋ 直达抓取 /api/discover v1.3]
 ```
 
 ### 3. 依托的外部 AI 模型（引擎侧，本项目仅调用其公开服务）

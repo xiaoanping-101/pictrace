@@ -16,13 +16,15 @@ Given an image (local file, pasted screenshot, or URL), PicTrace answers: **"Whe
 - 🔬 **Local forensics (nothing uploaded)** — EXIF camera/GPS/software metadata, perceptual hashes (aHash / dHash / pHash-DCT)
 - 🤖 **Server-side aggregation** — the server submits the image to engines and parses results (SauceNAO / IQDB verified working; Yandex / Bing / Baidu degrade gracefully to deep links when anti-bot measures kick in)
 - 🏷️ **Auto-classified results** — grouped by WeChat official-account articles (`mp.weixin.qq.com`), video, social posts, and news
-- 📚 **Citation report export** — Markdown provenance report with retrieval timestamps, hashes and hit links
-- 🗃️ **Local library dedup** — IndexedDB image library with hamming-distance matching
+- 🧠 **Content recognition (v1.2)** — on-device CLIP zero-shot classification (22 curated content prompts) recognizes the content type (person/animal/landmark/anime/product…), generates bilingual query terms, and routes to the engines best at "similar people / objects / scenes"
+- 🎯 **Similar-content direct results (v1.3)** — after recognition, the server **fetches and shows real URLs directly in the page** from six keyless public sources (DuckDuckGo images/videos, Openverse, Baidu Images, Bing web via base64-redirect decoding, Wikipedia REST), grouped into similar images / related videos (real bilibili/YouTube/Douyin links with durations) / articles / wiki entries — no more manual visits to aggregator sites
+- 📚 **Citation report export** — Markdown provenance report with retrieval timestamps, hashes, hit links and direct-result entries
+- 🗃️ **Local library dedup** — IndexedDB image library with hamming-distance + optional CLIP semantic matching
 - 🌐 Bilingual UI (中文 / English), dark forensic theme, zero frameworks, zero build, zero npm dependencies
 
-| Home | Workbench + aggregated results |
-| --- | --- |
-| ![home](docs/screenshots/home.png) | ![workbench](docs/screenshots/workbench-results.png) |
+| Home | Workbench + aggregated results | Semantic model (v1.1) | Recognition (v1.2) | Direct results (v1.3) |
+| --- | --- | --- | --- | --- |
+| ![home](docs/screenshots/home.png) | ![workbench](docs/screenshots/workbench-results.png) | ![semantic](docs/screenshots/semantic-model.png) | ![recognition](docs/screenshots/content-recognition.png) | ![direct](docs/screenshots/direct-results.png) |
 
 ## Quick start
 
@@ -64,7 +66,12 @@ flowchart LR
     F --> I[Yandex / Bing / Baidu<br/>best-effort, deep-link fallback]
     G & H & I --> J[Normalize + domain classification]
     J --> K[WeChat / video / social / news tabs]
-    K --> L[Citation report export]
+    B --> M[CLIP recognition v1.2<br/>on-device zero-shot]
+    M --> N[Query terms + entity routing]
+    N --> O[POST /api/discover v1.3<br/>direct fetch]
+    O --> P[DDG images/videos · Openverse<br/>Baidu · Bing web · Wikipedia]
+    P --> Q[Similar images / videos /<br/>articles / wiki — real URLs in-page]
+    K & Q --> L[Citation report export]
 ```
 
 See [README.md](README.md) for the full sequence diagram, hash-matching diagram, comparison with prior art, API reference, and citation guidance.
